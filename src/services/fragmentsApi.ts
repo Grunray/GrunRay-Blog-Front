@@ -1,4 +1,6 @@
 import type { FragmentMood } from '@/content/data/mockFragments'
+import { isStaticSite } from '@/config/staticSite'
+import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
 
 export interface Fragment {
   id: string
@@ -62,12 +64,38 @@ async function fragmentsFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return body.data
 }
 
+function filterFragments(
+  items: Fragment[],
+  params?: { mood?: FragmentMood | 'all'; sort?: 'newest' | 'oldest' },
+): Fragment[] {
+  let list = [...items]
+  if (params?.mood && params.mood !== 'all') {
+    list = list.filter((f) => f.mood === params.mood)
+  }
+  const sort = params?.sort ?? 'newest'
+  list.sort((a, b) => {
+    const ta = new Date(a.createdAt).getTime()
+    const tb = new Date(b.createdAt).getTime()
+    return sort === 'oldest' ? ta - tb : tb - ta
+  })
+  return list
+}
+
 export async function fetchFragments(params?: {
   mood?: FragmentMood | 'all'
   sort?: 'newest' | 'oldest'
   page?: number
   size?: number
 }): Promise<FragmentListResult> {
+  if (isStaticSite) {
+    const bundle = await loadStaticSiteBundle()
+    const all = filterFragments(bundle.xiqi.fragments.items, params)
+    const page = params?.page ?? 1
+    const size = params?.size ?? 50
+    const start = (page - 1) * size
+    const items = all.slice(start, start + size)
+    return { items, total: all.length, page, size }
+  }
   const q = new URLSearchParams()
   if (params?.mood && params.mood !== 'all') q.set('mood', params.mood)
   if (params?.sort) q.set('sort', params.sort)
@@ -78,9 +106,23 @@ export async function fetchFragments(params?: {
 }
 
 export async function fetchFragmentDetail(publicId: string): Promise<FragmentDetail> {
+  if (isStaticSite) {
+    const bundle = await loadStaticSiteBundle()
+    const detail = bundle.xiqi.fragmentDetails[publicId]
+    if (!detail) {
+      const err = new Error('not_found') as Error & { status?: number }
+      err.status = 404
+      throw err
+    }
+    return detail
+  }
   return fragmentsFetch<FragmentDetail>(`/api/fragments/${encodeURIComponent(publicId)}`)
 }
 
 export async function fetchXiqiPageConfig(page: string): Promise<XiqiPageConfig> {
+  if (isStaticSite) {
+    const bundle = await loadStaticSiteBundle()
+    return bundle.xiqi.xiqiPages[page] ?? { page, heroImageUrl: null, heroImageAlt: '', status: 'published' }
+  }
   return fragmentsFetch<XiqiPageConfig>(`/api/xiqi/pages/${encodeURIComponent(page)}`)
 }

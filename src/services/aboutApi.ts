@@ -1,4 +1,6 @@
 import type { AboutProfile } from '@/content/data/aboutResume'
+import { isStaticSite } from '@/config/staticSite'
+import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
 
 interface ApiEnvelope<T> {
   code: number
@@ -13,6 +15,10 @@ function apiUrl(path: string): string {
 }
 
 export async function fetchAboutProfile(): Promise<AboutProfile | null> {
+  if (isStaticSite) {
+    const bundle = await loadStaticSiteBundle()
+    return bundle.xiqi.about
+  }
   try {
     const res = await fetch(apiUrl('/api/xiqi/about'), {
       credentials: 'include',

@@ -1,4 +1,8 @@
 import type { AdminGuestMessage, GuestMessage } from '@/content/data/mockMessages'
+import { isStaticSite } from '@/config/staticSite'
+import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
+
+const STATIC_WRITE_MSG = '静态站不支持留言与审核，请在完整版站点操作'
 
 export type ModerationAction = 'approve' | 'reject' | 'hide' | 'restore'
 
@@ -45,6 +49,7 @@ async function messageFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export async function fetchMessageCaptcha(): Promise<MessageCaptcha> {
+  if (isStaticSite) throw new Error(STATIC_WRITE_MSG)
   return messageFetch<MessageCaptcha>('/api/messages/captcha')
 }
 
@@ -53,6 +58,25 @@ export async function fetchMessages(params: {
   page?: number
   size?: number
 }): Promise<MessageListResult> {
+  if (isStaticSite) {
+    const bundle = await loadStaticSiteBundle()
+    let items = [...bundle.messages.items]
+    const sort = params.sort ?? 'newest'
+    items.sort((a, b) => {
+      const ta = new Date(a.createdAt).getTime()
+      const tb = new Date(b.createdAt).getTime()
+      return sort === 'oldest' ? ta - tb : tb - ta
+    })
+    const page = params.page ?? 1
+    const size = params.size ?? 20
+    const start = (page - 1) * size
+    return {
+      items: items.slice(start, start + size),
+      total: items.length,
+      page,
+      size,
+    }
+  }
   const q = new URLSearchParams()
   if (params.sort) q.set('sort', params.sort)
   if (params.page) q.set('page', String(params.page))
@@ -66,6 +90,7 @@ export async function createMessage(payload: {
   captchaId: string
   captchaAnswer: string
 }): Promise<GuestMessage | null> {
+  if (isStaticSite) throw new Error(STATIC_WRITE_MSG)
   return messageFetch<GuestMessage | null>('/api/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -77,6 +102,7 @@ export async function createOwnerReply(
   publicId: string,
   payload: { content: string },
 ): Promise<GuestMessage> {
+  if (isStaticSite) throw new Error(STATIC_WRITE_MSG)
   return messageFetch<GuestMessage>(`/api/messages/${encodeURIComponent(publicId)}/reply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -90,6 +116,7 @@ export async function fetchAdminMessages(params: {
   page?: number
   size?: number
 }): Promise<MessageListResult & { items: AdminGuestMessage[] }> {
+  if (isStaticSite) throw new Error(STATIC_WRITE_MSG)
   const q = new URLSearchParams()
   if (params.status) q.set('status', params.status)
   if (params.sort) q.set('sort', params.sort)
@@ -105,6 +132,7 @@ export async function moderateMessage(
   publicId: string,
   action: ModerationAction,
 ): Promise<AdminGuestMessage> {
+  if (isStaticSite) throw new Error(STATIC_WRITE_MSG)
   return messageFetch<AdminGuestMessage>(
     `/api/messages/admin/${encodeURIComponent(publicId)}`,
     {

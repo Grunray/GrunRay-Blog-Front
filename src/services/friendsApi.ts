@@ -1,6 +1,10 @@
 import type { FriendLink, SpecialLink } from '@/content/data/mockFriends'
 import { MOCK_FRIEND_LINKS, MOCK_SPECIAL_LINKS } from '@/content/data/mockFriends'
 import { getFriendsApplySiteProfile } from '@/config/friendsSiteProfile'
+import { isStaticSite } from '@/config/staticSite'
+import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
+
+const STATIC_WRITE_MSG = '静态站不支持提交，请在完整版站点操作'
 
 export interface FriendsSiteProfile {
   title: string
@@ -85,6 +89,10 @@ async function friendsFetchWithMessage<T>(
 }
 
 export async function fetchFriendLinks(): Promise<FriendLink[]> {
+  if (isStaticSite) {
+    const bundle = await loadStaticSiteBundle()
+    return bundle.friends.links
+  }
   try {
     const data = await friendsFetch<FriendListResult>('/api/friends')
     return data.items
@@ -94,6 +102,10 @@ export async function fetchFriendLinks(): Promise<FriendLink[]> {
 }
 
 export async function fetchSpecialLinks(): Promise<SpecialLink[]> {
+  if (isStaticSite) {
+    const bundle = await loadStaticSiteBundle()
+    return bundle.friends.special
+  }
   try {
     const data = await friendsFetch<{ items: SpecialLink[] }>('/api/friends/special')
     return data.items
@@ -103,6 +115,10 @@ export async function fetchSpecialLinks(): Promise<SpecialLink[]> {
 }
 
 export async function fetchFriendsSiteProfile(): Promise<FriendsSiteProfile> {
+  if (isStaticSite) {
+    const bundle = await loadStaticSiteBundle()
+    return bundle.friends.siteProfile
+  }
   try {
     return await friendsFetch<FriendsSiteProfile>('/api/friends/site-profile')
   } catch {
@@ -117,12 +133,14 @@ export async function fetchFriendsSiteProfile(): Promise<FriendsSiteProfile> {
 }
 
 export async function fetchFriendCaptcha(): Promise<FriendCaptcha> {
+  if (isStaticSite) throw new Error(STATIC_WRITE_MSG)
   return friendsFetch<FriendCaptcha>('/api/friends/captcha')
 }
 
 export async function submitFriendApplication(
   payload: FriendApplicationPayload,
 ): Promise<string> {
+  if (isStaticSite) throw new Error(STATIC_WRITE_MSG)
   const { message } = await friendsFetchWithMessage<{ publicId?: string } | null>(
     '/api/friends/applications',
     {

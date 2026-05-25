@@ -3,6 +3,9 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import { apiGet } from '@/api/http'
+import { isStaticSite } from '@/config/staticSite'
+import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
+import { resolvePublicUrl } from '@/utils/resolvePublicUrl'
 import { useUiStore } from '@/stores/ui'
 
 /** 与 FilmFeed 全屏预览 (z-index:120) 错开 */
@@ -610,8 +613,22 @@ onMounted(async () => {
   window.addEventListener('resize', onResize)
 
   try {
-    const res = await apiGet<MusicTracksApi>('/api/music/tracks?size=50')
-    const list = Array.isArray(res.data) ? res.data : []
+    let list: MusicTrack[] = []
+    if (isStaticSite) {
+      const bundle = await loadStaticSiteBundle()
+      list = bundle.musicTracks.map(
+        (t) =>
+          ({
+            ...t,
+            url: resolvePublicUrl(t.url),
+            title: t.title ?? null,
+            artist: t.artist ?? null,
+          }) as MusicTrack,
+      )
+    } else {
+      const res = await apiGet<MusicTracksApi>('/api/music/tracks?size=50')
+      list = Array.isArray(res.data) ? res.data : []
+    }
     const el = audioRef.value
     if (list.length > 0 && el) {
       tracks.value = list

@@ -40,6 +40,15 @@ export interface Project {
   year?: number
   /** 详情页块顺序与配置（数据驱动） */
   layout: ProjectLayoutBlock[]
+  /** 项目详情相关文章（静态导出 / API 详情） */
+  related_posts?: Array<{
+    slug: string
+    title: string
+    label?: string | null
+    pinned?: boolean
+    source?: string
+    published_at?: string
+  }>
 }
 
 export type PostType = 'article' | 'project_note' | 'algorithm'

@@ -1,10 +1,14 @@
 /**
- * 内容访问层：文章与项目均走 Flask API。
+ * 内容访问层：开发走 Flask API；静态站（VITE_STATIC_SITE）读 public/static/site.json。
  */
 import { apiGet } from '@/api/http'
+import { isStaticSite } from '@/config/staticSite'
+import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
 import type { BlogCategoryFilter, Post, Project, ProjectNote, ProjectStatus } from '@/types/content'
 
 let projectsCache: Project[] = []
+let postsBySlugCache: Record<string, Post> | null = null
+let postsListCache: Post[] | null = null
 let projectsLoaded = false
 let projectsLoadingPromise: Promise<Project[]> | null = null
 
@@ -12,14 +16,26 @@ function byId<T extends { id: string }>(list: T[], id: string): T | undefined {
   return list.find((x) => x.id === id)
 }
 
+async function ensureStaticPosts(): Promise<void> {
+  if (postsBySlugCache) return
+  const bundle = await loadStaticSiteBundle()
+  postsBySlugCache = bundle.postsBySlug
+  postsListCache = bundle.posts
+}
+
 export async function ensureProjectsLoaded(force = false): Promise<Project[]> {
   if (!force && projectsLoaded) return projectsCache
   if (!force && projectsLoadingPromise) return projectsLoadingPromise
 
   projectsLoadingPromise = (async () => {
-    const q = new URLSearchParams({ include_archived: 'true' })
-    const data = await apiGet<{ projects: Project[] }>(`/api/projects?${q.toString()}`)
-    projectsCache = data.projects ?? []
+    if (isStaticSite) {
+      const bundle = await loadStaticSiteBundle()
+      projectsCache = bundle.projects ?? []
+    } else {
+      const q = new URLSearchParams({ include_archived: 'true' })
+      const data = await apiGet<{ projects: Project[] }>(`/api/projects?${q.toString()}`)
+      projectsCache = data.projects ?? []
+    }
     projectsLoaded = true
     return projectsCache
   })()
@@ -89,9 +105,34 @@ export interface BlogPostQueryOptions {
   keyword?: string
 }
 
+function filterPostsForBlog(posts: Post[], options?: BlogPostQueryOptions): Post[] {
+  const category = options?.category ?? 'all'
+  let visible = posts.filter((post) => {
+    if (post.type === 'algorithm' || post.type === 'article') return true
+    const st = projectStatusForNote((post as ProjectNote).project_id)
+    return st !== undefined && st !== 'hidden'
+  })
+  if (category !== 'all') {
+    const cid = BLOG_CATEGORY_TO_ID[category]
+    visible = visible.filter((p) => p.category_id === cid)
+  }
+  const tag = options?.tag?.trim()
+  const keyword = options?.keyword?.trim().toLowerCase()
+  return visible.filter((post) => {
+    if (tag && !post.tags.includes(tag)) return false
+    if (!keyword) return true
+    const haystack = `${post.title} ${post.summary} ${post.tags.join(' ')}`.toLowerCase()
+    return haystack.includes(keyword)
+  })
+}
+
 /** 博客聚合：算法与普通文章全部展示；项目笔记需所属项目非 hidden */
 export async function listPostsForBlog(options?: BlogPostQueryOptions): Promise<Post[]> {
   await ensureProjectsLoaded()
+  if (isStaticSite) {
+    await ensureStaticPosts()
+    return sortPosts(filterPostsForBlog(postsListCache ?? [], options))
+  }
   const q = new URLSearchParams()
   const category = options?.category ?? 'all'
   if (category !== 'all') {
@@ -99,20 +140,7 @@ export async function listPostsForBlog(options?: BlogPostQueryOptions): Promise<
   }
   const endpoint = q.size ? `/api/posts?${q.toString()}` : '/api/posts'
   const { posts } = await apiGet<{ posts: Post[] }>(endpoint)
-  const visible = posts.filter((post) => {
-    if (post.type === 'algorithm' || post.type === 'article') return true
-    const st = projectStatusForNote((post as ProjectNote).project_id)
-    return st !== undefined && st !== 'hidden'
-  })
-  const tag = options?.tag?.trim()
-  const keyword = options?.keyword?.trim().toLowerCase()
-  const filtered = visible.filter((post) => {
-    if (tag && !post.tags.includes(tag)) return false
-    if (!keyword) return true
-    const haystack = `${post.title} ${post.summary} ${post.tags.join(' ')}`.toLowerCase()
-    return haystack.includes(keyword)
-  })
-  return sortPosts(filtered)
+  return sortPosts(filterPostsForBlog(posts, options))
 }
 
 export async function listAlgorithmPosts(): Promise<Post[]> {
@@ -123,6 +151,13 @@ export async function listPostsForProjectSlug(projectSlug: string): Promise<Post
   await ensureProjectsLoaded()
   const project = getProjectBySlug(projectSlug)
   if (!project || !canAccessProjectPublic(project)) return []
+  if (isStaticSite) {
+    await ensureStaticPosts()
+    const notes = (postsListCache ?? []).filter(
+      (p) => p.type === 'project_note' && (p as ProjectNote).project_id === project.id,
+    )
+    return sortPosts(notes as Post[])
+  }
   const q = new URLSearchParams({
     type: 'project_note',
     project_id: project.id,
@@ -132,6 +167,10 @@ export async function listPostsForProjectSlug(projectSlug: string): Promise<Post
 }
 
 export async function getPostBySlug(slug: string): Promise<Post | undefined> {
+  if (isStaticSite) {
+    await ensureStaticPosts()
+    return postsBySlugCache?.[slug]
+  }
   try {
     return await apiGet<Post>(`/api/posts/${encodeURIComponent(slug)}?html=1`)
   } catch (e) {
@@ -153,6 +192,10 @@ export function getRawProjects(): Project[] {
 }
 
 export async function getRawPosts(): Promise<Post[]> {
+  if (isStaticSite) {
+    await ensureStaticPosts()
+    return postsListCache ?? []
+  }
   const { posts } = await apiGet<{ posts: Post[] }>('/api/posts')
   return posts
 }

@@ -11,6 +11,9 @@ import { SITE_NAME } from '@/config/site'
 import '@/styles/page-enter-home.css'
 import { useUiStore } from '@/stores/ui'
 import type { Post } from '@/types/content'
+import { isStaticSite } from '@/config/staticSite'
+import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
+import { resolvePublicUrl } from '@/utils/resolvePublicUrl'
 import { readSessionJson, writeSessionJson } from '@/utils/sessionJsonCache'
 
 const { t } = useI18n()
@@ -39,6 +42,14 @@ async function loadAvatar() {
     return
   }
   try {
+    if (isStaticSite) {
+      const bundle = await loadStaticSiteBundle()
+      if (bundle.home.avatarUrl) {
+        avatarUrl.value = resolvePublicUrl(bundle.home.avatarUrl)
+        writeSessionJson(CACHE_HOME_AVATAR, { url: avatarUrl.value })
+      }
+      return
+    }
     const q = new URLSearchParams({
       page: '1',
       size: '1',
@@ -66,6 +77,12 @@ async function loadLatestUpdatedPost() {
     return
   }
   try {
+    if (isStaticSite) {
+      const bundle = await loadStaticSiteBundle()
+      latestUpdatedPosts.value = bundle.home.latestUpdatedPosts ?? []
+      writeSessionJson(CACHE_HOME_LATEST, { posts: latestUpdatedPosts.value })
+      return
+    }
     const res = await fetch('/api/posts/latest-updated')
     if (!res.ok) return
     const json = (await res.json()) as { posts?: Post[] }
@@ -83,6 +100,12 @@ async function loadRandomRecommendedPost() {
     return
   }
   try {
+    if (isStaticSite) {
+      const bundle = await loadStaticSiteBundle()
+      randomRecommendedPost.value = bundle.home.randomRecommendedPost ?? null
+      writeSessionJson(CACHE_HOME_RANDOM, { post: randomRecommendedPost.value })
+      return
+    }
     const res = await fetch('/api/posts/random-recommend')
     if (!res.ok) return
     const json = (await res.json()) as { post?: Post }
