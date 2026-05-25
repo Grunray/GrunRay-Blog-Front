@@ -33,13 +33,17 @@ jobs:
         run: npm ci && npm run build:github-pages
         env:
           VITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
-          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_ROUTER_HISTORY: hash
+          VITE_SITE_ORIGIN: https://grunray.github.io
+          VITE_STATIC_SITE: "true"
 
       - name: Prepare Pages artifact
         run: |
           test -f dist/index.html
+          test -f dist/static/site.json || test -f public/static/site.json
           cp dist/index.html dist/404.html
           ls -la dist
+          ls -la dist/static 2>/dev/null || true
 
       - uses: actions/upload-pages-artifact@v3
         with:

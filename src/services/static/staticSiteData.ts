@@ -1,8 +1,10 @@
+import siteBundleJson from '@/data/site.bundle.json'
 import type { AboutProfile } from '@/content/data/aboutResume'
 import type { FriendLink, SpecialLink } from '@/content/data/mockFriends'
 import type { GuestMessage } from '@/content/data/mockMessages'
 import type { FragmentDetail, FragmentListResult, XiqiPageConfig } from '@/services/fragmentsApi'
 import type { RecommendDetail, RecommendListResult } from '@/services/recommendApi'
+import { isStaticSite } from '@/config/staticSite'
 import { resolvePublicUrlsDeep } from '@/utils/resolvePublicUrl'
 import type { Post, Project } from '@/types/content'
 
@@ -72,10 +74,18 @@ export interface StaticSiteBundle {
 let cached: StaticSiteBundle | null = null
 let loading: Promise<StaticSiteBundle> | null = null
 
+function bundleFromBuild(): StaticSiteBundle {
+  return resolvePublicUrlsDeep(siteBundleJson as unknown as StaticSiteBundle)
+}
+
 export async function loadStaticSiteBundle(): Promise<StaticSiteBundle> {
   if (cached) return cached
   if (!loading) {
     loading = (async () => {
+      if (isStaticSite) {
+        cached = bundleFromBuild()
+        return cached
+      }
       const base = import.meta.env.BASE_URL || '/'
       const res = await fetch(`${base}static/site.json`)
       if (!res.ok) {
