@@ -1,0 +1,37 @@
+/**
+ * 自 designed/cursor 迁入的文字拖尾样式（可通过 --cursor-trail-text / --cursor-trail-glow 随主题微调）
+ */
+.cursor-trail-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.cursor-trail {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  pointer-events: none;
+}
+
+.cursor-trail__char {
+  position: absolute;
+  font-size: 2em;
+  color: var(--cursor-trail-text, #00ff9a);
+  text-shadow:
+    0 0 15px var(--cursor-trail-glow, #00ff9a),
+    0 0 50px var(--cursor-trail-glow, #00ff9a);
+  transform: translate(-50%, -50%);
+  will-change: transform;
+  /* 英文等宽 + 中文回退；不再 text-transform，保留 props.text 原样大小写与中文字形 */
+  font-family:
+    'Courier New',
+    Courier,
+    ui-monospace,
+    monospace,
+    'PingFang SC',
+    'Microsoft YaHei',
+    'Noto Sans SC',
+    sans-serif;
+}

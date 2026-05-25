@@ -1,0 +1,110 @@
+/**
+ * 404 彩蛋：全站乱码 / 信号干扰视觉（html[data-page-corrupt]）
+ * 解锁 abstract 主题后由 pageCorruptState 移除该属性。
+ */
+html[data-page-corrupt='true'] #app {
+  animation: corrupt-jitter 0.12s steps(2, end) infinite;
+}
+
+html[data-page-corrupt='true'] #app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgb(0 0 0 / 0.12) 0,
+    rgb(0 0 0 / 0.12) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+  animation: corrupt-scan 0.08s steps(2, end) infinite;
+}
+
+html[data-page-corrupt='true'] #app::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.12;
+  background-image: repeating-radial-gradient(
+    circle at 17% 32%,
+    rgb(255 255 255 / 0.08) 0 1px,
+    transparent 1px 3px
+  );
+  animation: corrupt-noise 0.35s steps(4, end) infinite;
+}
+
+html[data-page-corrupt='true'] :where(h1, h2, h3, p, a, span, button, label, li, nav) {
+  text-shadow:
+    2px 0 rgb(255 0 80 / 0.55),
+    -2px 0 rgb(0 220 255 / 0.55);
+}
+
+@keyframes corrupt-jitter {
+  0% {
+    transform: translate(0, 0);
+    filter: hue-rotate(0deg) saturate(1);
+  }
+
+  25% {
+    transform: translate(-1px, 1px);
+    filter: hue-rotate(25deg) saturate(1.35);
+  }
+
+  50% {
+    transform: translate(2px, -1px);
+    filter: hue-rotate(-18deg) saturate(1.2);
+  }
+
+  75% {
+    transform: translate(-2px, -1px);
+    filter: hue-rotate(12deg) saturate(1.45);
+  }
+
+  100% {
+    transform: translate(1px, 2px);
+    filter: hue-rotate(0deg) saturate(1);
+  }
+}
+
+@keyframes corrupt-scan {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(4px);
+  }
+}
+
+@keyframes corrupt-noise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0.1;
+  }
+
+  50% {
+    transform: translate(-3%, 2%);
+    opacity: 0.18;
+  }
+
+  100% {
+    transform: translate(2%, -2%);
+    opacity: 0.12;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-page-corrupt='true'] #app {
+    animation: none;
+  }
+
+  html[data-page-corrupt='true'] #app::before,
+  html[data-page-corrupt='true'] #app::after {
+    animation: none;
+  }
+}

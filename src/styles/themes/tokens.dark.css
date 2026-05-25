@@ -1,0 +1,29 @@
+/**
+ * 深色主题令牌
+ */
+ [data-theme='dark'] {
+  /* 改时请同步 src/theme/pageBackgrounds.ts */
+  --color-bg-base: #172226;
+  --color-bg-surface: #1e2c2e;
+  --color-bg-elevated: #243332;
+  --color-reading-bg: #262e2b;
+  --color-text: #d1dcd9;
+  --color-text-muted: #95a9a5;
+  --color-border: #3f5952;
+  --color-accent: #a0ccab;
+  --color-accent-muted: #6d9b7e;
+  --color-on-accent: #1e2d24;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-card: 0 2px 8px rgb(0 0 0 / 40%);
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', sans-serif;
+  --cursor-trail-dot: rgb(160 204 171 / 45%);
+  /* 液态玻璃（LiquidGlass 风格） */
+  --glass-blur: 18px;
+  --glass-nav-blur: min(22px, 5vw);
+  --glass-card-bg: rgb(18 24 26 / 0.55);
+  --glass-card-border: rgb(160 204 171 / 0.22);
+  --glass-nav-bg: rgb(12 22 24 / 0.6);
+  --glass-nav-border: rgb(160 204 171 / 0.18);
+}

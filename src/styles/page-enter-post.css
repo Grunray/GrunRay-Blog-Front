@@ -1,0 +1,81 @@
+/* 文章详情 / 项目详情；根节点带 .page-enter--play */
+
+@keyframes page-enter-post-block {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .post-detail-article:not(.page-enter--play) > *,
+  .project-detail:not(.page-enter--play) > * {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+.post-detail-article.page-enter--play > *,
+.project-detail.page-enter--play > * {
+  animation: page-enter-post-block 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.post-detail-article.page-enter--play > *:nth-child(1),
+.project-detail.page-enter--play > *:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.post-detail-article.page-enter--play > *:nth-child(2),
+.project-detail.page-enter--play > *:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.post-detail-article.page-enter--play > *:nth-child(3),
+.project-detail.page-enter--play > *:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.post-detail-article.page-enter--play > *:nth-child(4),
+.project-detail.page-enter--play > *:nth-child(4) {
+  animation-delay: 0.28s;
+}
+.post-detail-article.page-enter--play > *:nth-child(5),
+.project-detail.page-enter--play > *:nth-child(5) {
+  animation-delay: 0.36s;
+}
+.post-detail-article.page-enter--play > *:nth-child(6),
+.project-detail.page-enter--play > *:nth-child(6) {
+  animation-delay: 0.44s;
+}
+.post-detail-article.page-enter--play > *:nth-child(7),
+.project-detail.page-enter--play > *:nth-child(7) {
+  animation-delay: 0.52s;
+}
+.post-detail-article.page-enter--play > *:nth-child(8),
+.project-detail.page-enter--play > *:nth-child(8) {
+  animation-delay: 0.6s;
+}
+.post-detail-article.page-enter--play > *:nth-child(9),
+.project-detail.page-enter--play > *:nth-child(9) {
+  animation-delay: 0.68s;
+}
+.post-detail-article.page-enter--play > *:nth-child(10),
+.project-detail.page-enter--play > *:nth-child(10) {
+  animation-delay: 0.76s;
+}
+.post-detail-article.page-enter--play > *:nth-child(11),
+.project-detail.page-enter--play > *:nth-child(11) {
+  animation-delay: 0.84s;
+}
+.post-detail-article.page-enter--play > *:nth-child(12),
+.project-detail.page-enter--play > *:nth-child(12) {
+  animation-delay: 0.92s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-detail-article.page-enter--play > *,
+  .project-detail.page-enter--play > * {
+    animation: none !important;
+  }
+}

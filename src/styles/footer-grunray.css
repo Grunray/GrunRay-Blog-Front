@@ -1,0 +1,363 @@
+/**
+ * GrunRay 页脚（designed/footer）— z-index:0，由 .app-page-cover 从上往下盖住后滚到底揭开
+ */
+
+.footer-grunray-root {
+  --footer-grunray-brand-height: 360px;
+  --footer-grunray-word-ratio: 6.533;
+  --footer-grunray-block-max-height: calc(var(--footer-grunray-brand-height) - 2.5rem);
+  --footer-grunray-meta-height: 48px;
+  --footer-grunray-slice-count: 20;
+  --footer-grunray-brand-bg: transparent;
+  --footer-grunray-text-muted: var(--color-text-muted);
+  --footer-grunray-glyph-filter: brightness(0);
+  --footer-grunray-reveal-progress: var(--reveal-progress, 0);
+
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 揭开时叠在 .app-page-cover 之上，避免 padding-bottom 蒙层挡住 GRUNRAY 拖影 */
+html[data-footer-over-cover] .footer-grunray-root {
+  z-index: 2;
+}
+
+.footer-grunray-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* 品牌区：外层仅占位裁切；背景与 clip-path 同在 .footer-grunray-brand-reveal */
+.footer-grunray-brand-wrap {
+  position: relative;
+  overflow: hidden;
+  height: var(--footer-grunray-brand-height);
+  background: transparent;
+  contain: layout style paint;
+}
+
+/* 液态玻璃 + 自下而上 clip（顶缘 inset 随 --reveal-progress 减小） */
+.footer-grunray-brand-reveal {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: color-mix(in srgb, var(--glass-card-bg) 76%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--glass-card-border) 90%, transparent);
+  backdrop-filter: blur(var(--glass-blur)) saturate(155%) brightness(1.04);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(155%) brightness(1.04);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    0 -18px 44px -26px rgb(0 0 0 / 0.2);
+  clip-path: inset(calc((1 - var(--reveal-progress, 0)) * 100%) 0 0 0);
+  transform: translateZ(0);
+}
+
+html[data-footer-revealing] .footer-grunray-brand-reveal {
+  will-change: clip-path;
+}
+
+.footer-grunray-brand-reveal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    168deg,
+    rgb(255 255 255 / 0.14) 0%,
+    transparent 40%,
+    transparent 58%,
+    color-mix(in srgb, var(--color-accent) 9%, transparent) 100%
+  );
+}
+
+html[data-theme='light'] .footer-grunray-brand-reveal {
+  background: color-mix(in srgb, var(--glass-card-bg) 68%, rgb(255 255 255 / 0.38));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    0 -14px 36px -22px rgb(15 23 42 / 0.14);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .footer-grunray-brand-reveal {
+    background: color-mix(in srgb, var(--glass-card-bg) 88%, var(--color-bg-base));
+  }
+}
+
+.footer-grunray-root.is-fully-revealed .footer-grunray-brand-reveal {
+  clip-path: none;
+}
+
+.footer-grunray-root.is-interactive .footer-grunray-content {
+  pointer-events: none;
+}
+
+.footer-grunray-root.is-interactive .footer-grunray-brand-word {
+  pointer-events: auto;
+}
+
+.footer-grunray-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 1.25rem clamp(0.75rem, 2vw, 1.5rem) 1.5rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.footer-grunray-brand-word {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: clamp(0.08rem, 0.55vw, 0.35rem);
+  width: var(--brand-word-width, min(100%, calc(var(--footer-grunray-block-max-height) * var(--footer-grunray-word-ratio))));
+  height: var(--brand-word-height, auto);
+  max-width: 100%;
+  max-height: var(--footer-grunray-block-max-height);
+  aspect-ratio: var(--footer-grunray-word-ratio);
+  user-select: none;
+  touch-action: none;
+  pointer-events: auto;
+  cursor: default;
+}
+
+.footer-grunray-letter {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.footer-grunray-letter__slices {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.footer-grunray-letter__slice {
+  position: relative;
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.footer-grunray-letter__slice-inner {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: calc(var(--footer-grunray-slice-count) * 100%);
+  top: calc(var(--slice-index) * -100%);
+  transform: translate3d(var(--slice-offset, 0px), 0, 0);
+}
+
+.footer-grunray-root.is-interactive .footer-grunray-letter__slice-inner {
+  will-change: transform;
+}
+
+.footer-grunray-letter__glyph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  filter: var(--footer-grunray-glyph-filter);
+  pointer-events: none;
+}
+
+[data-theme='abstract'] .footer-grunray-root {
+  --footer-grunray-glyph-filter: brightness(0) saturate(100%);
+}
+
+/*
+ * ICP / 外链胶囊（Eric-Terminal footer-inner glass-panel）：
+ * 进入页脚滚动区 toggled is-visible，CSS 过渡上滑显隐，与 GRUNRAY --reveal-progress 无关
+ */
+.footer-grunray-meta-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-footer-meta-bar, 180);
+  display: flex;
+  justify-content: center;
+  padding: 0 0.75rem;
+  pointer-events: none;
+}
+
+.footer-grunray-meta-bar__shell {
+  position: relative;
+  width: min(920px, calc(100% - 1.5rem));
+  max-width: 960px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-nav-border);
+  background: color-mix(in srgb, var(--glass-nav-bg) 88%, var(--color-bg-elevated));
+  backdrop-filter: blur(var(--glass-nav-blur)) saturate(125%);
+  -webkit-backdrop-filter: blur(var(--glass-nav-blur)) saturate(125%);
+  box-shadow:
+    0 4px 24px -8px rgb(0 0 0 / 0.12),
+    0 16px 48px -28px rgb(0 0 0 / 0.22);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(0, calc(100% + 1.25rem), 0);
+  pointer-events: none;
+  transition:
+    opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.5s;
+  will-change: transform, opacity;
+}
+
+.footer-grunray-meta-bar__shell.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, 0, 0);
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.footer-grunray-meta-bar__inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: 0.85rem;
+  min-height: var(--footer-grunray-meta-height);
+  padding: 0.55rem 1.15rem;
+}
+
+.footer-grunray-meta-col--start {
+  justify-self: start;
+  min-width: 0;
+}
+
+.footer-grunray-meta-col--end {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.15rem 0.35rem;
+  min-width: 0;
+}
+
+.footer-grunray-meta-divider {
+  width: 1px;
+  align-self: stretch;
+  min-height: 1.5rem;
+  justify-self: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--glass-nav-border) 72%, transparent);
+}
+
+.footer-grunray-meta-divider--inline {
+  justify-self: auto;
+  margin-inline: 0.1rem;
+}
+
+.footer-grunray-copyright,
+.footer-grunray-icp-link,
+.footer-grunray-rss-link {
+  font-size: 0.82rem;
+  color: var(--footer-grunray-text-muted);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.footer-grunray-icp-link,
+.footer-grunray-rss-link {
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-grunray-icp-link:hover,
+.footer-grunray-rss-link:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.footer-grunray-meta-bar .footer-icon-btn__label {
+  z-index: calc(var(--z-footer-meta-bar, 180) + 2);
+}
+
+.footer-grunray-meta-bar .footer-copy-toast {
+  z-index: calc(var(--z-footer-meta-bar, 180) + 3);
+}
+
+@media (max-width: 768px) {
+  .footer-grunray-meta-bar__shell {
+    width: min(100%, calc(100% - 1rem));
+    border-radius: 1.25rem;
+  }
+
+  .footer-grunray-meta-bar__inner {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    row-gap: 0.5rem;
+    column-gap: 0;
+    min-height: auto;
+    padding: 0.65rem 0.95rem;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .footer-grunray-meta-col--start {
+    justify-self: center;
+    order: 1;
+  }
+
+  .footer-grunray-meta-bar__inner > .footer-grunray-meta-divider {
+    display: none;
+  }
+
+  .footer-grunray-meta-col--end {
+    order: 2;
+    justify-self: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.45rem;
+  }
+
+  .footer-grunray-copyright,
+  .footer-grunray-icp-link,
+  .footer-grunray-rss-link {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-grunray-brand-wrap {
+    height: auto;
+    min-height: var(--footer-grunray-brand-height);
+  }
+
+  .footer-grunray-brand-reveal {
+    clip-path: none;
+  }
+
+  .footer-grunray-meta-bar__shell {
+    transition: opacity 0.2s ease;
+    transform: none;
+  }
+
+  .footer-grunray-meta-bar__shell:not(.is-visible) {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .footer-grunray-letter__slice-inner {
+    transform: none !important;
+  }
+}

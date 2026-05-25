@@ -1,0 +1,193 @@
+/**
+ * 服务端/客户端渲染的 Markdown 正文排版（表格、标题、列表等）。
+ * 用于 PostDetailView、项目 MarkdownBlock，以及其它 v-html 正文容器。
+ */
+.markdown-reading {
+  color: var(--color-text);
+  font-size: 1.06rem;
+  line-height: 1.75;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.markdown-reading :where(p) {
+  margin: 0.55em 0;
+}
+
+.markdown-reading :where(p:first-child) {
+  margin-top: 0;
+}
+
+.markdown-reading :where(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-reading :where(h1, h2, h3, h4) {
+  margin: 1em 0 0.45em;
+  line-height: 1.3;
+  color: var(--color-text);
+  font-weight: 650;
+}
+
+.markdown-reading :where(h1) {
+  font-size: 1.25rem;
+}
+.markdown-reading :where(h2) {
+  font-size: 1.12rem;
+}
+.markdown-reading :where(h3, h4) {
+  font-size: 1.02rem;
+}
+
+.markdown-reading :where(ul, ol) {
+  margin: 0.45em 0;
+  padding-left: 1.35rem;
+}
+
+.markdown-reading :where(li) {
+  margin: 0.25em 0;
+}
+
+.markdown-reading :where(blockquote) {
+  margin: 0.65em 0;
+  padding: 0.35rem 0 0.35rem 0.85rem;
+  border-left: 3px solid color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+  color: var(--color-text-muted);
+}
+
+.markdown-reading :where(a) {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-reading :where(hr) {
+  margin: 1rem 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.markdown-reading :where(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.65em 0;
+  font-size: 0.88rem;
+}
+
+.markdown-reading :where(th, td) {
+  border: 1px solid var(--color-border);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+
+.markdown-reading :where(th) {
+  background: color-mix(in srgb, var(--color-bg-elevated) 88%, transparent);
+}
+
+/* 无 Pygments 包裹的普通 <pre>（勿作用于 .codehilite 内的 pre） */
+.markdown-reading :where(pre) {
+  margin: 0.75em 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, #000);
+  background: color-mix(in srgb, var(--color-reading-bg, var(--color-bg-surface)) 92%, #1a1a1a);
+  overflow: auto;
+  line-height: 1.5;
+}
+
+.markdown-reading :where(code) {
+  font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, 'Courier New', monospace;
+  font-size: 0.92em;
+  padding: 0.12em 0.35em;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--color-bg-elevated) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.markdown-reading :where(pre code) {
+  font-size: 0.9em;
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+
+[data-theme='dark'] .markdown-reading :where(pre) {
+  background: #1a2220;
+  border-color: color-mix(in srgb, var(--color-border) 90%, #000);
+}
+
+/* 服务端 codehilite（Python-Markdown + Pygments）：VS Code 深色阅读块 */
+.markdown-reading :where(.codehilite),
+.markdown-reading :where(pre.codehilite) {
+  margin: 1rem 0;
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, #000);
+  border-radius: var(--radius-sm);
+  background: #1e1e1e;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 3%);
+  overflow: auto;
+}
+
+.markdown-reading :where(pre.codehilite) {
+  padding: 0.9rem 2.75rem 0.9rem 1rem;
+}
+
+.markdown-reading :where(.codehilite pre) {
+  margin: 0;
+  padding: 0.9rem 2.75rem 0.9rem 1rem;
+  white-space: pre;
+  line-height: 1.55;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.markdown-reading :where(pre.codehilite code),
+.markdown-reading :where(.codehilite code) {
+  color: #d4d4d4;
+  font-size: 0.9em;
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+
+.markdown-reading :where(.codehilite .k),
+.markdown-reading :where(.codehilite .kt),
+.markdown-reading :where(.codehilite .kd) {
+  color: #c586c0;
+}
+
+.markdown-reading :where(.codehilite .kr),
+.markdown-reading :where(.codehilite .kn),
+.markdown-reading :where(.codehilite .kp) {
+  color: #c586c0;
+}
+
+.markdown-reading :where(.codehilite .nf),
+.markdown-reading :where(.codehilite .fm) {
+  color: #dcdcaa;
+}
+
+.markdown-reading :where(.codehilite .nb),
+.markdown-reading :where(.codehilite .n) {
+  color: #9cdcfe;
+}
+
+.markdown-reading :where(.codehilite .s),
+.markdown-reading :where(.codehilite .s1),
+.markdown-reading :where(.codehilite .s2),
+.markdown-reading :where(.codehilite .sc) {
+  color: #ce9178;
+}
+
+.markdown-reading :where(.codehilite .m),
+.markdown-reading :where(.codehilite .mi),
+.markdown-reading :where(.codehilite .mf) {
+  color: #b5cea8;
+}
+
+.markdown-reading :where(.codehilite .c),
+.markdown-reading :where(.codehilite .c1),
+.markdown-reading :where(.codehilite .cm) {
+  color: #6a9955;
+}

@@ -1,0 +1,71 @@
+/* 友链页；根节点 .friends-page.page-enter--play */
+
+@keyframes page-enter-friends-block {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .friends-page:not(.page-enter--play) > * {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  .friends-page:not(.page-enter--play) .friend-card,
+  .friends-page:not(.page-enter--play) .friends-special-card {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+.friends-page.page-enter--play > * {
+  animation: page-enter-friends-block 0.68s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.friends-page.page-enter--play > *:nth-child(1) {
+  animation-delay: 0.04s;
+}
+.friends-page.page-enter--play > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.friends-page.page-enter--play > *:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.friends-page.page-enter--play > *:nth-child(4) {
+  animation-delay: 0.22s;
+}
+.friends-page.page-enter--play > *:nth-child(5) {
+  animation-delay: 0.28s;
+}
+.friends-page.page-enter--play > *:nth-child(6) {
+  animation-delay: 0.34s;
+}
+
+.friends-page.page-enter--play .friend-card,
+.friends-page.page-enter--play .friends-special-card {
+  animation: page-enter-friends-block 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.32s + var(--enter-i, 0) * 0.06s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friends-page.page-enter--play > *,
+  .friends-page.page-enter--play .friend-card,
+  .friends-page.page-enter--play .friends-special-card {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .friends-page:not(.page-enter--play) > *,
+  .friends-page:not(.page-enter--play) .friend-card,
+  .friends-page:not(.page-enter--play) .friends-special-card {
+    opacity: 1;
+    transform: none;
+  }
+}

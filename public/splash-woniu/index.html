@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="zh-Hans">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>开屏</title>
+    <script>
+      ;(function () {
+        var t = new URLSearchParams(location.search).get('theme')
+        document.documentElement.setAttribute('data-splash-theme', t === 'dark' ? 'dark' : 'light')
+      })()
+    </script>
+    <style>
+      /* 浅色 / 深色渐变与站点 tokens 近似（iframe 内无法使用 Vue 变量） */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        min-height: 100dvh;
+        background: linear-gradient(165deg, #f0f5f5 0%, #ccdddf 22%, #c1dec8 78%, #b3ced0 100%);
+      }
+      #stage {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        max-height: none;
+        overflow: visible;
+      }
+      #msg {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top, 0px));
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2;
+        max-width: min(92vw, 36rem);
+        margin: 0;
+        padding: 0.5rem 0.75rem;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', sans-serif;
+        font-size: 13px;
+        line-height: 1.45;
+        text-align: center;
+        border-radius: 8px;
+        background: color-mix(in srgb, #fff 88%, transparent);
+        box-shadow: 0 1px 8px rgb(0 0 0 / 8%);
+      }
+      .err {
+        color: #b91c1c;
+      }
+      html[data-splash-theme='dark'] body {
+        background: linear-gradient(165deg, #0f172a 0%, #1e293b 35%, #0f172a 72%, #172554 100%);
+      }
+      html[data-splash-theme='dark'] #msg {
+        background: color-mix(in srgb, #1e293b 92%, transparent);
+        color: #e2e8f0;
+      }
+      html[data-splash-theme='dark'] .err {
+        color: #f87171;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="msg" class="err" hidden></p>
+    <svg
+      id="stage"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 1600 1600"
+      preserveAspectRatio="xMidYMid meet"
+      overflow="visible"
+    ></svg>
+
+    <script>
+      const SVG_NS = 'http://www.w3.org/2000/svg'
+      /** 与植物本体的 viewBox 一致，在 build() 中从 植物本体.svg 更新 */
+      let stageW = 1600
+      let stageH = 1600
+
+      /**
+       * 沿 path 运动时的旋转锚点（蜗牛局部坐标，与 All 画板一致）：默认取螺旋壳 path 的几何中心，
+       * 不再用「整蜗牛下方」或画布比例点。
+       */
+      let motionPivotX = 800
+      let motionPivotY = 880
+
+      /** 在壳中心对齐之后，对整条 path 的额外平移（用户单位），一般保持 0 */
+      const SNAIL_PATH_ALIGN_EXTRA = { x: 0, y: 0 }
+
+      /** 使 path_down 起点落在「壳中心」(+ EXTRA) 的平移量 */
+      let snailAlignDx = 0
+      let snailAlignDy = 0
+
+      /**
+       * 头/尾探出动画的缩放锚点：由壳 path 采样得到（壳底部带状区内最左/最右点），
+       * 不使用壳外层 g 的 getBBox()，避免与真实螺旋轮廓脱节。
+       */
+      let peekAnchorTail = { x: 620, y: 860 }
+      let peekAnchorHead = { x: 780, y: 860 }
+      /** 水平「拉伸」：s=0 时 sx 很小，沿锚点所在竖线向左右压扁；s→1 时展开（尾向左、头向右延展） */
+      const PEEK_STRETCH_X_MIN = 0.05
+      /** 竖直略参与，避免完全纸片感 */
+      const PEEK_STRETCH_Y_MIN = 0.62
+
+      const ALL_SVG = encodeURI('All.svg')
+      const DROPLET_SVG = encodeURI('droplet.svg')
+      const DROPLET_PATH_SVG = encodeURI('droplet_path_down.svg')
+
+      /** 水滴沿路径在舞台上的线速度（用户单位 / ms），弧长按 DROPLET_SCALE 换算到路径局部坐标 */
+      const DROPLET_FALL_SPEED = 0.42
+      /** 水滴相对 200 画布的缩放，约 56 用户单位宽 */
+      const DROPLET_SCALE = 2.8
+      /** 开场：水滴淡出、自下而上揭示 */
+      const INTRO = {
+        dropletFadeMs: 750,
+        revealMs: 1100,
+      }
+
+      /** @type {{ x: number; y: number; width: number; height: number }} */
+      let shellBBoxStatic = { x: 0, y: 0, width: 0, height: 0 }
+      let plantAxisX = 400
+      /** 路径起点（path 上 t=0）在舞台上的 Y，与植物中轴上的起始高度一致 */
+      let dropletPathAnchorStageY = 100
+      /** 水滴运动路径（与 droplet_path_down.svg 同坐标系，200×200） */
+      /** @type {SVGPathElement | null} */
+      let dropletMotionPathEl = null
+      let dropletMotionPathLen = 0
+      /** @type {{ x: number; y: number }} */
+      let dropletMotionPathP0 = { x: 100, y: 100 }
+      /** 已走过的弧长（路径局部单位，与 getPointAtLength 一致） */
+      let dropletPathS = 0
+      /** @type {SVGRectElement | null} */
+      let introClipRectEl = null
+      /** @type {SVGGElement | null} */
+      let gDropletEl = null
+      /** @type {SVGGElement | null} */
+      let gRevealWrapEl = null
+      /** @type {number} */
+      let lastTickNow = 0
+      /** droplet | fade | reveal | main */
+      let introPhase = 'idle'
+      let fadeStartMs = 0
+      let revealStartMs = 0
+      let mainTimelineStartMs = 0
+
+      /** @type {SVGElement | null} */
+      let stage = null
+      /** @type {SVGGElement | null} */
+      let gSnail = null
+      /** @type {SVGPathElement | null} */
+      let pathDownEl = null
+      /** @type {SVGPathElement | null} */
+      let pathWalkEl = null
+      /** @type {SVGGElement | null} */
+      let gPaths = null
+
+      /** 由 path_down / path_walk 的 viewBox 在 build 时生成 */
+      /** @type {(p: { x: number; y: number }) => { x: number; y: number }} */
+      let mapDownToStage = (p) => ({ x: p.x, y: p.y })
+      /** @type {(p: { x: number; y: number }) => { x: number; y: number }} */
+      let mapWalkToStage = (p) => ({ x: p.x, y: p.y })
+
+      let rafId = 0
+      let running = false
+
+      /** path_walk 结束后停顿再交给父页头像动效（毫秒） */
+      const POST_WALK_PAUSE_MS = 820
+      /** 父页未应答时兜底（独立打开本页等） */
+      const AVATAR_HANDOFF_TIMEOUT_MS = 3400
+      /** main 子阶段 */
+      let mainSubPhase = 'animating'
+      let postWalkPauseEndMs = 0
+      let avatarWaitDeadline = 0
+      let handoffDoneReceived = false
+
+      /**
+       * 主序列（毫秒，从开场结束后起算）：壳沿 path_down（头尾隐藏）→ 头尾探出 → path_walk。
+       */
+      const TIMELINE = {
+        down: [0, 1800],
+        peek: [1800, 2800],
+        walk: [2800, 6800],
+      }
+
+      async function fetchSvgText(url) {
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(`无法加载 ${url}（HTTP ${res.status}）`)
+        return res.text()
+      }
+
+      /** @returns {SVGElement} */
+      function parseSvgRoot(text) {
+        const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
+        const root = doc.documentElement
+        if (root.nodeName !== 'svg') throw new Error('无效的 SVG')
+        /** @type {SVGElement} */
+        const out = /** @type {SVGElement} */ (document.importNode(root, true))
+        return out
+      }
+
+      /** 解析根 svg 的 viewBox，得到宽高（用于与舞台对齐的线性映射） */
+      function parseViewBoxSize(sourceRoot) {
+        const vb = sourceRoot.getAttribute('viewBox')
+        if (vb) {
+          const a = vb.trim().split(/[\s,]+/).map(parseFloat)
+          if (a.length >= 4 && a[2] > 0 && a[3] > 0) return { w: a[2], h: a[3] }
+        }
+        return { w: stageW, h: stageH }
+      }
+
+      /** 路径点从「该文件 viewBox 用户坐标」映射到舞台（与 nest + none 一致） */
+      function makeViewBoxToStageMapper(vbW, vbH, outW, outH) {
+        return (p) => ({
+          x: (p.x * outW) / vbW,
+          y: (p.y * outH) / vbH,
+        })
+      }
+
+      /** 下爬轨迹（旧版 g 包裹时的启发式）：无绿色/虚线，细描边或旧 3px 或典型起点 */
+      function isPathDownMotion(p) {
+        const id = (p.getAttribute('id') || '').toLowerCase()
+        if (id === 'path_walk') return false
+        if (id === 'path_down') return true
+        const st = ((p.getAttribute('style') || '') + (p.getAttribute('stroke') || '')).toLowerCase()
+        const d = (p.getAttribute('d') || '').trim()
+        if (!d) return false
+        if (st.includes('16a34a') || st.includes('stroke-dasharray')) return false
+        if (st.includes('stroke-width:3px') || st.includes('stroke-width:3')) return true
+        if (/stroke-width:\s*0\.\d+px/.test(st) && !st.includes('43484d')) return true
+        return /^m\s*400\s*,\s*377/i.test(d)
+      }
+
+      function isLikelyShellGroup(g) {
+        const id = ((g.getAttribute('id') || '') + (g.innerHTML || '')).toLowerCase()
+        if (/螺旋|shell|snail.*shell|壳/.test(id)) return true
+        const hit = g.querySelector('[id*="螺旋"],[id*="shell"],[id*="壳"]')
+        return !!hit
+      }
+
+      /**
+       * 从 All.svg 顶层 <g> 划分部件（结合 g 的 id 与子 path 的 style/d）。
+       */
+      function partitionAllSvg(svgRoot) {
+        const plantGs = []
+        let headG = null
+        let tailG = null
+        let walkG = null
+        let pathDownG = null
+        let shellG = null
+
+        const topGroups = [...svgRoot.children].filter((n) => n.localName === 'g')
+        for (const g of topGroups) {
+          const gid = (g.getAttribute('id') || '').trim()
+          if (gid === '蜗牛头') {
+            headG = g
+            continue
+          }
+          if (gid === 'path_down') {
+            pathDownG = g
+            continue
+          }
+          if (gid === 'guide-walk' || /walk|爬行|地面/i.test(gid)) {
+            walkG = g
+            continue
+          }
+          if (g.querySelector('[id="蜗牛尾"]')) {
+            tailG = g
+            continue
+          }
+          if (isLikelyShellGroup(g)) {
+            shellG = g
+            continue
+          }
+          const directPaths = [...g.querySelectorAll(':scope > path')]
+          if (directPaths.length === 1 && isPathDownMotion(directPaths[0])) {
+            pathDownG = g
+            continue
+          }
+          plantGs.push(g)
+        }
+
+        if (!pathDownG) {
+          const cand = [...svgRoot.querySelectorAll('path')].find(
+            (p) => isPathDownMotion(p) && (!walkG || !walkG.contains(p))
+          )
+          if (cand) pathDownG = cand.closest('g')
+        }
+        if (!walkG) {
+          walkG = topGroups.find((g) => /walk|guide/i.test(g.getAttribute('id') || '')) || null
+        }
+
+        return { plantGs, headG, tailG, walkG, pathDownG, shellG }
+      }
+
+      /**
+       * 解析两条运动 path：优先 All.svg 根上的 <path id="path_down"> / <path id="path_walk">；
+       * 否则回退到旧结构（g#path_down、g#guide-walk 等）。
+       */
+      function resolveMotionPathsFromAll(allRoot, part) {
+        /** @type {SVGPathElement | null} */
+        let srcDownPath = null
+        /** @type {SVGPathElement | null} */
+        let srcWalkPath = null
+
+        const idDown = allRoot.querySelector('#path_down')
+        const idWalk = allRoot.querySelector('#path_walk')
+        if (idDown && idDown.localName === 'path') srcDownPath = /** @type {SVGPathElement} */ (idDown)
+        if (idWalk && idWalk.localName === 'path') srcWalkPath = /** @type {SVGPathElement} */ (idWalk)
+
+        if (!srcDownPath && part.pathDownG) {
+          srcDownPath =
+            /** @type {SVGPathElement | null} */ (
+              part.pathDownG.querySelector(':scope > path') || part.pathDownG.querySelector('path')
+            )
+        }
+        if (!srcWalkPath && part.walkG) {
+          srcWalkPath = pickWalkPathFromGroup(part.walkG)
+        }
+
+        if (!srcDownPath || !srcWalkPath) {
+          throw new Error(
+            'All.svg：未找到运动路径。请在根级放置 <path id="path_down" …> 与 <path id="path_walk" …>，' +
+              '或保留 <g id="path_down"> 与 <g id="guide-walk">（或同类 id）包裹写法。'
+          )
+        }
+        return { srcDownPath, srcWalkPath }
+      }
+
+      /** guide-walk 内取周长最大的 path 作为爬行轨迹（忽略圆点等短线） */
+      function pickWalkPathFromGroup(walkG) {
+        const paths = [...walkG.querySelectorAll('path')].filter((p) => {
+          const d = p.getAttribute('d')
+          if (!d || !d.trim()) return false
+          try {
+            return p.getTotalLength() > 2
+          } catch {
+            return false
+          }
+        })
+        if (paths.length === 0) {
+          throw new Error('All.svg：guide-walk 组内未找到可用的 <path>（若已改为根级 path，请使用 id="path_walk"）')
+        }
+        if (paths.length === 1) return paths[0]
+        return paths.reduce((best, p) =>
+          p.getTotalLength() > best.getTotalLength() ? p : best
+        )
+      }
+
+      /** 将整组克隆嵌到与舞台同 viewBox 的 svg 内，便于与路径层一致变换 */
+      function nestGroupClone(groupEl) {
+        const inner = document.createElementNS(SVG_NS, 'svg')
+        inner.setAttribute('width', String(stageW))
+        inner.setAttribute('height', String(stageH))
+        inner.setAttribute('viewBox', `0 0 ${stageW} ${stageH}`)
+        inner.setAttribute('preserveAspectRatio', 'none')
+        inner.appendChild(groupEl.cloneNode(true))
+        return inner
+      }
+
+      function rectsIntersect(a, b) {
+        if (!a.width || !b.width) return false
+        return !(
+          a.x + a.width < b.x ||
+          b.x + b.width < a.x ||
+          a.y + a.height < b.y ||
+          b.y + b.height < a.y
+        )
+      }
+
+      function computePlantAxisXFromStage() {
+        const g = stage?.querySelector('#layer-plant')
+        if (!g) return
+        try {
+          const b = g.getBBox()
+          if (b.width > 2) plantAxisX = b.x + b.width / 2
+        } catch {
+          /* ignore */
+        }
+      }
+
+      function captureShellBBoxStatic() {
+        const shellPath = stage?.querySelector('#part-shell path')
+        if (!shellPath) return
+        try {
+          const b = shellPath.getBBox()
+          shellBBoxStatic = { x: b.x, y: b.y, width: b.width, height: b.height }
+        } catch {
+          /* ignore */
+        }
+      }
+
+      function updateDropletTransform() {
+        if (!gDropletEl) return
+        let cx = plantAxisX
+        let cy = dropletPathAnchorStageY
+        if (dropletMotionPathEl && dropletMotionPathLen > 1) {
+          const s = Math.max(0, Math.min(dropletPathS, dropletMotionPathLen))
+          const p = dropletMotionPathEl.getPointAtLength(s)
+          cx = plantAxisX + (p.x - dropletMotionPathP0.x) * DROPLET_SCALE
+          cy = dropletPathAnchorStageY + (p.y - dropletMotionPathP0.y) * DROPLET_SCALE
+        }
+        gDropletEl.setAttribute(
+          'transform',
+          `translate(${cx},${cy}) scale(${DROPLET_SCALE}) translate(-100,-100)`
+        )
+      }
+
+      /** 从 droplet_path_down.svg 解析第一条 path，供 getPointAtLength（可不挂 DOM） */
+      function initDropletMotionPathFromText(svgText) {
+        const root = parseSvgRoot(svgText)
+        const src = /** @type {SVGPathElement | null} */ (
+          root.querySelector('path[d]') || root.querySelector('path')
+        )
+        const d = src?.getAttribute('d')?.trim()
+        if (!d) throw new Error('droplet_path_down.svg：需要至少一条带 d 的 <path>')
+        dropletMotionPathEl = document.createElementNS(SVG_NS, 'path')
+        dropletMotionPathEl.setAttribute('d', d)
+        let len = 0
+        try {
+          len = dropletMotionPathEl.getTotalLength()
+        } catch {
+          len = 0
+        }
+        if (len < 2) throw new Error('droplet_path_down.svg：路径长度过短或无效')
+        dropletMotionPathLen = len
+        const p0 = dropletMotionPathEl.getPointAtLength(0)
+        dropletMotionPathP0 = { x: p0.x, y: p0.y }
+      }
+
+      function setIntroClipProgress(p) {
+        if (!introClipRectEl) return
+        const u = Math.max(0, Math.min(1, p))
+        introClipRectEl.setAttribute('y', String(stageH * (1 - u)))
+        introClipRectEl.setAttribute('height', String(stageH * u))
+      }
+
+      /**
+       * 在 #part-shell 内第一条壳 path 上采样：取 y 较大的一段（壳体偏下缘），
+       * 其中 x 最小者为尾锚点、x 最大者为头锚点（贴合螺旋轮廓，非矩形包围盒）。
+       */
+      function recomputePeekAnchorsFromShellPath() {
+        const shellPath = stage?.querySelector('#part-shell path')
+        if (!shellPath) return
+        let len = 0
+        try {
+          len = shellPath.getTotalLength()
+        } catch {
+          return
+        }
+        if (!len || len < 8) return
+
+        const n = 256
+        const pts = []
+        for (let i = 0; i <= n; i++) {
+          pts.push(shellPath.getPointAtLength((len * i) / n))
+        }
+        let minY = Infinity
+        let maxY = -Infinity
+        for (const p of pts) {
+          minY = Math.min(minY, p.y)
+          maxY = Math.max(maxY, p.y)
+        }
+        const span = maxY - minY || 1
+        const yCut = maxY - span * 0.14
+        const band = pts.filter((p) => p.y >= yCut)
+        if (band.length < 2) return
+
+        let left = band[0]
+        let right = band[0]
+        for (const p of band) {
+          if (p.x < left.x) left = p
+          if (p.x > right.x) right = p
+        }
+        if (Math.hypot(right.x - left.x, right.y - left.y) < 6) {
+          left = { x: left.x - 18, y: left.y }
+          right = { x: right.x + 18, y: right.y }
+        }
+        peekAnchorTail = { x: left.x, y: left.y }
+        peekAnchorHead = { x: right.x, y: right.y }
+      }
+
+      /**
+       * 运动用 pivot：螺旋壳 path 的中心（优先 getBBox，失败则沿周长均匀采样求质心）。
+       * 与头尾探出锚点（壳下缘左右）不同。
+       */
+      function recomputeMotionPivotFromShellPath() {
+        const shellPath = stage?.querySelector('#part-shell path')
+        if (!shellPath) return
+        try {
+          const bb = shellPath.getBBox()
+          if (bb.width > 1 && bb.height > 1) {
+            motionPivotX = bb.x + bb.width / 2
+            motionPivotY = bb.y + bb.height / 2
+            return
+          }
+        } catch {
+          /* 未挂载等 */
+        }
+        let len = 0
+        try {
+          len = shellPath.getTotalLength()
+        } catch {
+          return
+        }
+        if (!len || len < 8) return
+        const n = 128
+        let sx = 0
+        let sy = 0
+        for (let i = 0; i <= n; i++) {
+          const p = shellPath.getPointAtLength((len * i) / n)
+          sx += p.x
+          sy += p.y
+        }
+        motionPivotX = sx / (n + 1)
+        motionPivotY = sy / (n + 1)
+      }
+
+      /** @param {(p: { x: number; y: number }) => { x: number; y: number }} map */
+      function angleAtStage(path, len, map) {
+        const total = path.getTotalLength()
+        const l0 = Math.max(0, len - 2)
+        const l1 = Math.min(total, len + 2)
+        const p0 = map(path.getPointAtLength(l0))
+        const p1 = map(path.getPointAtLength(l1))
+        return (Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180) / Math.PI
+      }
+
+      function getBattleCalib() {
+        return { cx: 0, cy: 0 }
+      }
+
+      function recomputeSnailAlignFromPathDown() {
+        if (!pathDownEl) {
+          snailAlignDx = 0
+          snailAlignDy = 0
+          return
+        }
+        const p0 = mapDownToStage(pathDownEl.getPointAtLength(0))
+        snailAlignDx = motionPivotX - p0.x + SNAIL_PATH_ALIGN_EXTRA.x
+        snailAlignDy = motionPivotY - p0.y + SNAIL_PATH_ALIGN_EXTRA.y
+      }
+
+      /** @param {(p: { x: number; y: number }) => { x: number; y: number }} map */
+      function setSnailOnPath(path, len, pivotX, pivotY, map) {
+        if (!gSnail || !path || !map) return
+        const p = map(path.getPointAtLength(len))
+        const { cx, cy } = getBattleCalib()
+        const ang = angleAtStage(path, len, map)
+        gSnail.setAttribute(
+          'transform',
+          `translate(${p.x + cx + snailAlignDx}, ${p.y + cy + snailAlignDy}) rotate(${ang}) translate(${-pivotX}, ${-pivotY})`
+        )
+      }
+
+      function setShellOpacity(t) {
+        const shell = stage?.querySelector('#part-shell')
+        if (shell) shell.setAttribute('opacity', String(t))
+      }
+
+      function setPeekProgress(t) {
+        const head = stage?.querySelector('#part-head')
+        const tail = stage?.querySelector('#part-tail')
+        const s = Math.max(0, Math.min(1, t))
+        const sx = PEEK_STRETCH_X_MIN + (1 - PEEK_STRETCH_X_MIN) * s
+        const sy = PEEK_STRETCH_Y_MIN + (1 - PEEK_STRETCH_Y_MIN) * s
+        const axT = peekAnchorTail.x
+        const ayT = peekAnchorTail.y
+        const axH = peekAnchorHead.x
+        const ayH = peekAnchorHead.y
+        if (tail) {
+          tail.setAttribute('opacity', String(s))
+          tail.setAttribute(
+            'transform',
+            `translate(${axT},${ayT}) scale(${sx},${sy}) translate(${-axT},${-ayT})`
+          )
+        }
+        if (head) {
+          head.setAttribute('opacity', String(s))
+          head.setAttribute(
+            'transform',
+            `translate(${axH},${ayH}) scale(${sx},${sy}) translate(${-axH},${-ayH})`
+          )
+        }
+      }
+
+      function resetMainHandoffState() {
+        mainSubPhase = 'animating'
+        postWalkPauseEndMs = 0
+        avatarWaitDeadline = 0
+        handoffDoneReceived = false
+      }
+
+      function cancelAnim() {
+        if (rafId) cancelAnimationFrame(rafId)
+        rafId = 0
+        running = false
+        resetMainHandoffState()
+      }
+
+      function postShellAvatarStartToParent() {
+        if (window.parent === window) return
+        let x = motionPivotX
+        let y = motionPivotY
+        try {
+          if (stage) {
+            const sp = stage.createSVGPoint()
+            sp.x = motionPivotX
+            sp.y = motionPivotY
+            const m = stage.getScreenCTM()
+            if (m) {
+              const p = sp.matrixTransform(m)
+              x = p.x
+              y = p.y
+            }
+          }
+        } catch (_) {
+          /* ignore */
+        }
+        window.parent.postMessage({ type: 'grunray-splash-avatar-start', x, y }, '*')
+      }
+
+      function postSplashCompleteToParent() {
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'grunray-splash-complete' }, '*')
+        }
+      }
+
+      window.addEventListener('message', function onSplashParentMessage(ev) {
+        if (ev.data && ev.data.type === 'grunray-splash-handoff-done') {
+          handoffDoneReceived = true
+        }
+      })
+
+      function pickPivot() {
+        return { x: motionPivotX, y: motionPivotY }
+      }
+
+      function computeDropletStartY() {
+        if (shellBBoxStatic.width > 0.5 && shellBBoxStatic.y > 80) {
+          return Math.max(stageH * 0.04, shellBBoxStatic.y - 140)
+        }
+        return stageH * 0.06
+      }
+
+      /**
+       * @returns {boolean} true 表示主序列已结束
+       */
+      function runMainTimelineTick(tMain, pivot, downLen, walkLen) {
+        const [down0, down1] = TIMELINE.down
+        const [peek0, peek1] = TIMELINE.peek
+        const [walk0, walk1] = TIMELINE.walk
+
+        if (tMain < down1) {
+          setShellOpacity(1)
+          setPeekProgress(0)
+          const u = downLen > 0 ? (tMain - down0) / (down1 - down0) : 0
+          if (pathDownEl) setSnailOnPath(pathDownEl, u * downLen, pivot.x, pivot.y, mapDownToStage)
+          return false
+        }
+        if (tMain < peek1) {
+          setShellOpacity(1)
+          if (pathDownEl) setSnailOnPath(pathDownEl, downLen, pivot.x, pivot.y, mapDownToStage)
+          const u = (tMain - peek0) / (peek1 - peek0)
+          setPeekProgress(u)
+          return false
+        }
+        if (tMain < walk1) {
+          setShellOpacity(1)
+          setPeekProgress(1)
+          const u = walkLen > 0 ? (tMain - walk0) / (walk1 - walk0) : 0
+          if (pathWalkEl) setSnailOnPath(pathWalkEl, u * walkLen, pivot.x, pivot.y, mapWalkToStage)
+          return false
+        }
+        return true
+      }
+
+      function runPlayLoop(playStartMs) {
+        lastTickNow = playStartMs
+        introPhase = 'droplet'
+        syncPathVisibility()
+
+        const tick = (now) => {
+          if (!running) return
+
+          if (introPhase === 'droplet') {
+            const dt = Math.min(64, Math.max(0, now - lastTickNow))
+            lastTickNow = now
+            if (dropletMotionPathEl && dropletMotionPathLen > 1) {
+              dropletPathS += (DROPLET_FALL_SPEED * dt) / DROPLET_SCALE
+            }
+            updateDropletTransform()
+            let hit = false
+            if (gDropletEl && shellBBoxStatic.width > 0.5) {
+              try {
+                const db = gDropletEl.getBBox()
+                hit = rectsIntersect(db, shellBBoxStatic)
+              } catch {
+                /* ignore */
+              }
+            }
+            const atPathEnd =
+              dropletMotionPathLen > 1 && dropletPathS >= dropletMotionPathLen - 0.25
+            if (hit || atPathEnd) {
+              introPhase = 'fade'
+              fadeStartMs = now
+              if (atPathEnd && dropletMotionPathLen > 1) dropletPathS = dropletMotionPathLen
+              updateDropletTransform()
+            }
+            rafId = requestAnimationFrame(tick)
+            return
+          }
+
+          if (introPhase === 'fade') {
+            const u = (now - fadeStartMs) / INTRO.dropletFadeMs
+            if (gDropletEl) gDropletEl.setAttribute('opacity', String(Math.max(0, 1 - Math.min(1, u))))
+            if (u >= 1) {
+              introPhase = 'reveal'
+              revealStartMs = now
+              if (gDropletEl) {
+                gDropletEl.setAttribute('visibility', 'hidden')
+                gDropletEl.setAttribute('opacity', '1')
+              }
+            }
+            rafId = requestAnimationFrame(tick)
+            return
+          }
+
+          if (introPhase === 'reveal') {
+            const u = (now - revealStartMs) / INTRO.revealMs
+            setIntroClipProgress(u)
+            if (u >= 1) {
+              introPhase = 'main'
+              mainTimelineStartMs = now
+              lastTickNow = now
+              syncPathVisibility()
+            }
+            rafId = requestAnimationFrame(tick)
+            return
+          }
+
+          const tMain = now - mainTimelineStartMs
+          const pivot = pickPivot()
+          const downLen = pathDownEl ? pathDownEl.getTotalLength() : 0
+          const walkLen = pathWalkEl ? pathWalkEl.getTotalLength() : 0
+          const walkEnd = TIMELINE.walk[1]
+
+          if (mainSubPhase === 'animating') {
+            const timelineDone = runMainTimelineTick(tMain, pivot, downLen, walkLen)
+            if (!timelineDone) {
+              rafId = requestAnimationFrame(tick)
+              return
+            }
+            mainSubPhase = 'postWalkPause'
+            postWalkPauseEndMs = now + POST_WALK_PAUSE_MS
+            runMainTimelineTick(walkEnd + 0.05, pivot, downLen, walkLen)
+            rafId = requestAnimationFrame(tick)
+            return
+          }
+
+          if (mainSubPhase === 'postWalkPause') {
+            runMainTimelineTick(walkEnd + 0.05, pivot, downLen, walkLen)
+            if (now >= postWalkPauseEndMs) {
+              mainSubPhase = 'avatarWait'
+              postWalkPauseEndMs = 0
+              avatarWaitDeadline = now + AVATAR_HANDOFF_TIMEOUT_MS
+              postShellAvatarStartToParent()
+            }
+            rafId = requestAnimationFrame(tick)
+            return
+          }
+
+          if (mainSubPhase === 'avatarWait') {
+            runMainTimelineTick(walkEnd + 0.05, pivot, downLen, walkLen)
+            const standalone = window.parent === window
+            if (handoffDoneReceived || standalone || now >= avatarWaitDeadline) {
+              running = false
+              introPhase = 'idle'
+              rafId = 0
+              syncPathVisibility()
+              resetMainHandoffState()
+              postSplashCompleteToParent()
+            } else {
+              rafId = requestAnimationFrame(tick)
+            }
+            return
+          }
+
+          rafId = requestAnimationFrame(tick)
+        }
+
+        rafId = requestAnimationFrame(tick)
+      }
+
+      function resetVisual() {
+        cancelAnim()
+        introPhase = 'idle'
+        computePlantAxisXFromStage()
+        captureShellBBoxStatic()
+        dropletPathAnchorStageY = computeDropletStartY()
+        dropletPathS = 0
+        setIntroClipProgress(0)
+        if (gDropletEl) {
+          gDropletEl.setAttribute('visibility', 'visible')
+          gDropletEl.setAttribute('opacity', '1')
+        }
+        updateDropletTransform()
+        setShellOpacity(1)
+        setPeekProgress(0)
+        const pivot = pickPivot()
+        if (pathDownEl) setSnailOnPath(pathDownEl, 0, pivot.x, pivot.y, mapDownToStage)
+        syncPathVisibility()
+      }
+
+      async function build() {
+        stage = document.getElementById('stage')
+        const msg = document.getElementById('msg')
+        if (!stage) return
+
+        try {
+          const [allText, dropText, dropletPathText] = await Promise.all([
+            fetchSvgText(ALL_SVG),
+            fetchSvgText(DROPLET_SVG),
+            fetchSvgText(DROPLET_PATH_SVG),
+          ])
+          const allRoot = parseSvgRoot(allText)
+          const dropRoot = parseSvgRoot(dropText)
+          initDropletMotionPathFromText(dropletPathText)
+          const vb = parseViewBoxSize(allRoot)
+          stageW = vb.w
+          stageH = vb.h
+          /** 根 viewBox 四周留白：meet 下整体略缩小，显著减少边缘动画被裁切 */
+          const vbPad = Math.round(Math.max(stageW, stageH) * 0.2)
+          stage.setAttribute('viewBox', `${-vbPad} ${-vbPad} ${stageW + 2 * vbPad} ${stageH + 2 * vbPad}`)
+          stage.setAttribute('preserveAspectRatio', 'xMidYMid meet')
+          stage.setAttribute('overflow', 'visible')
+
+          mapDownToStage = makeViewBoxToStageMapper(stageW, stageH, stageW, stageH)
+          mapWalkToStage = makeViewBoxToStageMapper(stageW, stageH, stageW, stageH)
+
+          const part = partitionAllSvg(allRoot)
+          const { srcDownPath, srcWalkPath } = resolveMotionPathsFromAll(allRoot, part)
+
+          while (stage.firstChild) stage.removeChild(stage.firstChild)
+
+          const defs = document.createElementNS(SVG_NS, 'defs')
+          const clipPathEl = document.createElementNS(SVG_NS, 'clipPath')
+          clipPathEl.setAttribute('id', 'intro-clip-plantshell')
+          clipPathEl.setAttribute('clipPathUnits', 'userSpaceOnUse')
+          const clipRect = document.createElementNS(SVG_NS, 'rect')
+          clipRect.setAttribute('id', 'intro-clip-rect')
+          clipRect.setAttribute('x', '0')
+          clipRect.setAttribute('y', String(stageH))
+          clipRect.setAttribute('width', String(stageW))
+          clipRect.setAttribute('height', '0')
+          clipPathEl.appendChild(clipRect)
+          defs.appendChild(clipPathEl)
+          stage.appendChild(defs)
+          introClipRectEl = clipRect
+
+          gRevealWrapEl = document.createElementNS(SVG_NS, 'g')
+          gRevealWrapEl.setAttribute('id', 'intro-reveal')
+          gRevealWrapEl.setAttribute('clip-path', 'url(#intro-clip-plantshell)')
+
+          const gPlant = document.createElementNS(SVG_NS, 'g')
+          gPlant.setAttribute('id', 'layer-plant')
+          part.plantGs.forEach((g) => gPlant.appendChild(g.cloneNode(true)))
+          gRevealWrapEl.appendChild(gPlant)
+
+          gPaths = document.createElementNS(SVG_NS, 'g')
+          gPaths.setAttribute('id', 'layer-paths')
+          const gPathCalib = document.createElementNS(SVG_NS, 'g')
+          gPathCalib.setAttribute('id', 'path-calib')
+
+          pathDownEl = /** @type {SVGPathElement} */ (srcDownPath.cloneNode(true))
+          pathWalkEl = /** @type {SVGPathElement} */ (srcWalkPath.cloneNode(true))
+          pathDownEl.setAttribute('fill', 'none')
+          pathWalkEl.setAttribute('fill', 'none')
+          pathDownEl.setAttribute('opacity', '0.55')
+          pathWalkEl.setAttribute('opacity', '0.55')
+          gPathCalib.appendChild(pathDownEl)
+          gPathCalib.appendChild(pathWalkEl)
+          gPaths.appendChild(gPathCalib)
+          stage.appendChild(gPaths)
+
+          gSnail = document.createElementNS(SVG_NS, 'g')
+          gSnail.setAttribute('id', 'snail-root')
+
+          const gParts = document.createElementNS(SVG_NS, 'g')
+          gParts.setAttribute('id', 'snail-parts')
+
+          const partShell = document.createElementNS(SVG_NS, 'g')
+          partShell.setAttribute('id', 'part-shell')
+          /** 与植物同时出现，不再做壳的渐显 */
+          partShell.setAttribute('opacity', '1')
+          if (part.shellG) partShell.appendChild(nestGroupClone(part.shellG))
+
+          const partHead = document.createElementNS(SVG_NS, 'g')
+          partHead.setAttribute('id', 'part-head')
+          partHead.setAttribute('opacity', '0')
+          if (part.headG) partHead.appendChild(nestGroupClone(part.headG))
+
+          const partTail = document.createElementNS(SVG_NS, 'g')
+          partTail.setAttribute('id', 'part-tail')
+          partTail.setAttribute('opacity', '0')
+          if (part.tailG) partTail.appendChild(nestGroupClone(part.tailG))
+
+          gParts.appendChild(partShell)
+          gParts.appendChild(partTail)
+          gParts.appendChild(partHead)
+          gSnail.appendChild(gParts)
+          gRevealWrapEl.appendChild(gSnail)
+          stage.appendChild(gRevealWrapEl)
+
+          gDropletEl = document.createElementNS(SVG_NS, 'g')
+          gDropletEl.setAttribute('id', 'layer-droplet')
+          const dropInner = document.createElementNS(SVG_NS, 'svg')
+          dropInner.setAttribute('width', '200')
+          dropInner.setAttribute('height', '200')
+          dropInner.setAttribute('viewBox', dropRoot.getAttribute('viewBox') || '0 0 200 200')
+          dropInner.setAttribute('preserveAspectRatio', 'xMidYMid meet')
+          for (const ch of [...dropRoot.childNodes]) {
+            if (ch.nodeType === 1) dropInner.appendChild(/** @type {Element} */ (ch).cloneNode(true))
+          }
+          gDropletEl.appendChild(dropInner)
+          stage.appendChild(gDropletEl)
+
+          syncPathVisibility()
+          applyBattleCalib()
+          recomputeMotionPivotFromShellPath()
+          recomputePeekAnchorsFromShellPath()
+          recomputeSnailAlignFromPathDown()
+          resetVisual()
+          msg.hidden = true
+          requestAnimationFrame(() => startPlay())
+        } catch (e) {
+          msg.hidden = false
+          msg.textContent = (e && e.message) || '加载失败，请稍后重试或刷新页面。'
+          postSplashCompleteToParent()
+        }
+      }
+
+      function syncPathVisibility() {
+        if (!gPaths) return
+        gPaths.setAttribute('visibility', 'hidden')
+      }
+
+      function applyBattleCalib() {
+        const { cx, cy } = getBattleCalib()
+        const cal = stage?.querySelector('#path-calib')
+        if (cal) cal.setAttribute('transform', `translate(${cx}, ${cy})`)
+      }
+
+      function startPlay() {
+        if (!pathDownEl || !pathWalkEl) return
+        cancelAnim()
+        running = true
+        computePlantAxisXFromStage()
+        captureShellBBoxStatic()
+        dropletPathAnchorStageY = computeDropletStartY()
+        dropletPathS = 0
+        setIntroClipProgress(0)
+        if (gDropletEl) {
+          gDropletEl.setAttribute('visibility', 'visible')
+          gDropletEl.setAttribute('opacity', '1')
+        }
+        updateDropletTransform()
+        const pivot = pickPivot()
+        if (pathDownEl) setSnailOnPath(pathDownEl, 0, pivot.x, pivot.y, mapDownToStage)
+        setPeekProgress(0)
+        runPlayLoop(performance.now())
+      }
+
+      build()
+    </script>
+  </body>
+</html>

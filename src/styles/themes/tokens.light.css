@@ -1,0 +1,30 @@
+/**
+ * 浅色主题 — 主色 #a0ccab；页面底为 #c1dec8 → #6b9ea3 渐变；正文 #334F52。
+ */
+[data-theme='light'] {
+  /* 整页背景（html 使用）；渐变自原纯色底过渡到青绿（改时请同步 src/theme/pageBackgrounds.ts） */
+  /* --color-bg-base: linear-gradient(165deg, #f0f5f5 0%, #ccdddf 25%, #c1dec8 90%, #b3ced0 100%); */
+  --color-bg-base: #d6e4e7;
+  --color-bg-surface: #e2f2e8;
+  --color-bg-elevated: #d4eadc;
+  --color-reading-bg: #f1f0e8;
+  --color-text: #334f52;
+  --color-text-muted: #4d6b6e;
+  --color-border: #a8c9b4;
+  --color-accent: #a0ccab;
+  --color-accent-muted: #b8dcc4;
+  --color-on-accent: #2f4238;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-card: 0 1px 4px rgb(51 79 82 / 12%);
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', sans-serif;
+  --cursor-trail-dot: rgb(160 204 171 / 38%);
+  /* 液态玻璃（LiquidGlass 风格） */
+  --glass-blur: 18px;
+  --glass-nav-blur: min(22px, 5vw);
+  --glass-card-bg: rgb(255 255 255 / 0.48);
+  --glass-card-border: rgb(51 79 82 / 0.16);
+  --glass-nav-bg: rgb(255 255 255 / 0.4);
+  --glass-nav-border: rgb(51 79 82 / 0.14);
+}

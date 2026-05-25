@@ -1,0 +1,122 @@
+[
+  {
+    "id": "proj-demo-app",
+    "slug": "demo-app",
+    "locale": "zh",
+    "title": "示例作品：数据面板",
+    "summary": "用于验证项目列表、详情块与主题壳层的演示项目。",
+    "tags": ["Vue", "TypeScript", "可视化"],
+    "status": "published",
+    "start_date": "2025-11-03",
+    "end_date": "2026-02-08",
+    "github_url": "https://github.com/Grunray/GrunRay_wiki",
+    "featured": true,
+    "year": 2025,
+    "layout": [
+      {
+        "type": "overview",
+        "title": "概览",
+        "body": "本项目演示「同一项目多块展示」：数据来自 JSON，块类型由注册表解析，新增块无需改页面路由。"
+      },
+      {
+        "type": "demo",
+        "title": "在线演示",
+        "demoUrl": "/api/media/files/demos/task-board/v1/index.html",
+        "body": "源码位于 demos/task-board，产物由后端静态目录托管。"
+      },
+      {
+        "type": "gallery",
+        "title": "截图占位",
+        "images": [
+          "https://picsum.photos/seed/grunray1/480/280",
+          "https://picsum.photos/seed/grunray2/480/280"
+        ]
+      },
+      {
+        "type": "changelog",
+        "title": "更新记录",
+        "body": "- v0.1 初始结构\n- v0.2 接入主题与博客聚合"
+      }
+    ]
+  },
+  {
+    "id": "proj-demo-app2",
+    "slug": "demo-app2",
+    "locale": "zh",
+    "title": "示例作品：数据面板",
+    "summary": "用于验证项目列表、详情块与主题壳层的演示项目。",
+    "tags": ["Vue", "TypeScript", "可视化"],
+    "status": "published",
+    "start_date": "2025-11-07",
+    "end_date": "2026-02-08",
+    "github_url": "https://github.com/Grunray/GrunRay_wiki",
+    "featured": true,
+    "year": 2025,
+    "layout": [
+      {
+        "type": "overview",
+        "title": "概览",
+        "body": "本项目演示「同一项目多块展示」：数据来自 JSON，块类型由注册表解析，新增块无需改页面路由。"
+      },
+      {
+        "type": "demo",
+        "title": "在线演示",
+        "demoUrl": "/api/media/files/demos/task-board/v1/index.html",
+        "body": "源码位于 demos/task-board，产物由后端静态目录托管。"
+      },
+      {
+        "type": "gallery",
+        "title": "截图占位",
+        "images": [
+          "https://picsum.photos/seed/grunray1/480/280",
+          "https://picsum.photos/seed/grunray2/480/280"
+        ]
+      },
+      {
+        "type": "changelog",
+        "title": "更新记录",
+        "body": "- v0.1 初始结构\n- v0.2 接入主题与博客聚合"
+      }
+    ]
+  },
+  {
+    "id": "proj-archived-lib",
+    "slug": "archived-lib",
+    "locale": "zh",
+    "title": "已归档：小型工具库",
+    "summary": "展示归档状态与角标。",
+    "tags": ["工具"],
+    "status": "archived",
+    "start_date": "2023-06-18",
+    "end_date": "2023-11-20",
+    "github_url": "https://github.com/Grunray",
+    "featured": false,
+    "year": 2023,
+    "layout": [
+      {
+        "type": "overview",
+        "title": "说明",
+        "body": "此项目为归档示例，笔记仍可出现但总览可带「归档」提示。"
+      }
+    ]
+  },
+  {
+    "id": "proj-secret",
+    "slug": "secret-internal",
+    "locale": "zh",
+    "title": "隐藏项目（不应出现在列表）",
+    "summary": "用于校验隐藏规则。",
+    "tags": [],
+    "status": "hidden",
+    "start_date": "2024-01-08",
+    "github_url": "https://github.com/Grunray",
+    "featured": false,
+    "year": 2024,
+    "layout": [
+      {
+        "type": "markdown",
+        "body": "若直接访问 slug 应 404（与规范一致）。"
+      }
+    ]
+  }
+]

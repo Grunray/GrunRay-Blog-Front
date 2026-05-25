@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- display=swap：先以系统字体排版，字体文件到达后再替换，减轻阻塞感；media=print+onload 将样式表移出关键渲染路径 -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Averia+Gruesa+Libre&family=Playfair+Display:ital,wght@0,500;1,500&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Averia+Gruesa+Libre&family=Playfair+Display:ital,wght@0,500;1,500&display=swap"
+      />
+    </noscript>
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="GrunRay 博客 RSS"
+      href="/rss.xml"
+    />
+    <title>GrunRay</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

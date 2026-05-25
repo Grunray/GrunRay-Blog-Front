@@ -1,0 +1,531 @@
+@import './themes/tokens.light.css';
+@import './themes/tokens.dark.css';
+@import './themes/tokens.abstract.css';
+@import './themes/page-corrupt.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg-base);
+  /* 首屏默认；导航后由 router.afterEach + theme/pagePhotoBackgrounds.ts 写入内联 --page-photo-bg-image */
+  --page-photo-bg-image: url('/api/media/files/film/main/background/bg_homeview.png');
+  transition:
+    background 0.35s ease,
+    color 0.2s ease;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  line-height: 1.55;
+}
+
+/* 全局隐藏滚动条（保留滚动能力） */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge Legacy */
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chrome/Safari/Edge Chromium */
+}
+
+/* 主题切换扩散层 Teleport 在 body 下且 z-index:0，保证整站内容叠在其上方、不被遮住 */
+#app {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  min-height: 100%;
+}
+
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    transition: none;
+  }
+}
+
+:root {
+  /* 页脚 ICP 胶囊（Teleport 到 body）：高于 #app / 顶栏，低于开屏与光标拖尾 */
+  --z-footer-meta-bar: 180;
+  /* 与 footer-grunray.css / useFooterGrunRayReveal 一致：两层蒙层底缘对齐线 */
+  --footer-grunray-brand-height: 360px;
+}
+
+.app-root {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/*
+ * 主内容盖板：底缘 clip 与 footer 同步（勿用 fixed 高度遮罩，progress=0 时会盖住半屏）
+ */
+.app-page-cover {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 100%;
+  padding-bottom: var(--footer-reveal-space, 0px);
+  background: var(--color-bg-base);
+  box-shadow: none;
+  transform: translateZ(0);
+  clip-path: inset(
+    0 0 calc(var(--footer-grunray-brand-height, 360px) * var(--reveal-progress, 0)) 0
+  );
+}
+
+html[data-photo-bg='true'] .app-page-cover {
+  background: color-mix(in srgb, var(--color-bg-base) 72%, transparent);
+}
+
+html[data-footer-revealing] .app-page-cover {
+  will-change: clip-path;
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 3rem;
+}
+
+/*
+ * 可复用：让当前页面内容区突破默认居中容器，铺满可用视口宽度。
+ * 通过路由 meta 控制挂载，不影响其他页面。
+ */
+.app-main.app-main--full-viewport {
+  max-width: none;
+  margin: 0;
+  padding: 1rem;
+}
+
+/* 液态玻璃卡片（参考 designed/LiquidGlass post-card 思路：半透明 + backdrop-filter） */
+.card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-card-border);
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%) brightness(1.02);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%) brightness(1.02);
+  box-shadow: var(--shadow-card);
+  padding: 1rem 1.25rem;
+  transform: translateZ(0);
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 22%,
+    color-mix(in srgb, var(--color-accent) 18%, transparent) 50%,
+    transparent 76%
+  );
+  transform: translate3d(-35%, 0, 0);
+  transition:
+    opacity 0.28s ease,
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * 更不透明的液态玻璃：glass token 与页面底色混色，正文可读性更好。
+ * 配方参考 footer-grunray fallback 与 Blog 筛选按钮的 surface 混色。
+ */
+.card.card-overflow-visible {
+  overflow: visible;
+}
+
+.card.card-overflow-visible:hover {
+  overflow: visible;
+}
+
+.card.card-glass-dense {
+  background: color-mix(in srgb, var(--glass-card-bg) 88%, var(--color-bg-base));
+  background-image: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--color-accent) 5%, transparent) 0%,
+    transparent 50%
+  );
+  box-shadow:
+    var(--shadow-card),
+    inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent);
+}
+
+html[data-theme='light'] .card.card-glass-dense {
+  background: color-mix(in srgb, var(--glass-card-bg) 58%, var(--color-bg-surface));
+}
+
+html[data-photo-bg='true'] .card.card-glass-dense {
+  background: color-mix(in srgb, var(--glass-card-bg) 72%, var(--color-bg-surface));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translate3d(0, -3px, 0);
+    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--glass-card-border));
+    box-shadow:
+      0 18px 40px -24px rgb(0 0 0 / 0.2),
+      var(--shadow-card);
+  }
+
+  .card:hover::after {
+    opacity: 1;
+    transform: translate3d(35%, 0, 0);
+  }
+}
+
+/*
+ * 顶栏：随页面滚动贴在视口最上沿（sticky + top:0），全宽玻璃底 + 内层限宽。
+ * 勿给 header 再设 position:relative（会覆盖 sticky）；见下方 .app-root 子选择器。
+ */
+.glass-nav-sticky-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  isolation: isolate;
+  overflow: visible;
+  padding: 0.95rem 0;
+  transition: padding 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/*
+ * 横条与胶囊共用同一套水平定位：始终 left:50% + translateX(-50%)。
+ * 若横条用 left:0、胶囊用 left:50%，过渡时会动画 left，视觉上会像从左滑到中间并闪烁。
+ * 横条态用 width:100% 配合上述定位即可铺满整行。
+ */
+.glass-nav-sticky-wrap::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  right: auto;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  transform: translateX(-50%);
+  background: var(--glass-nav-bg);
+  border: none;
+  border-bottom: 1px solid var(--glass-nav-border);
+  border-radius: 0;
+  backdrop-filter: blur(var(--glass-nav-blur)) saturate(125%);
+  -webkit-backdrop-filter: blur(var(--glass-nav-blur)) saturate(125%);
+  box-shadow: 0 12px 36px -20px rgb(0 0 0 / 0.2);
+  z-index: 0;
+  pointer-events: none;
+  transition:
+    width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    top 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    bottom 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s ease,
+    box-shadow 0.4s ease;
+}
+
+/* 滚动后：同一锚点下收窄宽度，形成居中胶囊（无横向位移动画） */
+.glass-nav-sticky-wrap[data-nav-compact='true']::before {
+  width: min(920px, calc(100% - 1.5rem));
+  top: 0.75rem;
+  bottom: 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-nav-border);
+  border-bottom: 1px solid var(--glass-nav-border);
+  box-shadow:
+    0 4px 24px -8px rgb(0 0 0 / 0.12),
+    0 16px 48px -28px rgb(0 0 0 / 0.22);
+}
+
+.glass-nav-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0.5rem 1.4rem;
+  transition:
+    padding 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    max-width 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glass-nav-sticky-wrap[data-nav-compact='true'] {
+  padding: 0;
+}
+
+.glass-nav-sticky-wrap[data-nav-compact='true'] .glass-nav-inner {
+  max-width: min(920px, calc(100% - 1.5rem));
+  padding: 1.52rem 1.35rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card::after,
+  .glass-nav-sticky-wrap,
+  .glass-nav-sticky-wrap::before,
+  .glass-nav-inner {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  .card:hover::after {
+    opacity: 0;
+  }
+
+  .btn-accent:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+.tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  margin-right: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+/* 全站强调操作按钮（玻璃底 + 主题 accent，与项目页 action-btn 一致） */
+.btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.5rem 1.15rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 36%, var(--color-border));
+  background: color-mix(in srgb, var(--color-bg-surface) 84%, transparent);
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.btn-accent:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-accent) 56%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 16%, var(--color-bg-surface));
+  transform: translateY(-1px);
+}
+
+.btn-accent:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-accent) 58%, var(--color-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.btn-accent:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.prose {
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text);
+}
+
+.abstract-grid-bg {
+  display: none;
+}
+
+[data-theme='abstract'] .abstract-grid-bg {
+  display: block;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--abstract-grid-opacity);
+  background-image:
+    linear-gradient(var(--color-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* 全屏照片背景：照片铺满；灰色蒙层底缘随 --reveal-progress 与页脚顶缘对齐 */
+html[data-photo-bg='true'] {
+  background-color: var(--color-bg-base);
+  background-image: var(--page-photo-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+}
+
+html[data-photo-bg='true']::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: calc(var(--footer-grunray-brand-height, 360px) * var(--reveal-progress, 0));
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    color-mix(in srgb, var(--color-bg-base) 34%, transparent),
+    color-mix(in srgb, var(--color-bg-base) 34%, transparent)
+  );
+}
+
+html[data-theme='light'][data-photo-bg='true']::before {
+  background: linear-gradient(rgb(236 242 247 / 0.12), rgb(236 242 247 / 0.12));
+}
+
+html[data-theme='dark'][data-photo-bg='true']::before {
+  background: linear-gradient(rgb(15 23 42 / 0.52), rgb(15 23 42 / 0.52));
+}
+
+@media (min-width: 960px) {
+  html[data-photo-bg='true'] {
+    background-attachment: fixed;
+  }
+}
+
+/* 照片背景 URL 切换：旧图叠在新图之上再淡出（由 pagePhotoBackgrounds.ts 打 class） */
+@keyframes page-photo-bg-swap-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+html[data-photo-bg='true'].page-photo-bg--swap::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  bottom: calc(var(--footer-grunray-brand-height, 360px) * var(--reveal-progress, 0));
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--page-photo-bg-image-prev);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: scroll;
+  animation: page-photo-bg-swap-fade 0.48s ease-out forwards;
+}
+
+@media (min-width: 960px) {
+  html[data-photo-bg='true'].page-photo-bg--swap::after {
+    background-attachment: fixed;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-photo-bg='true'].page-photo-bg--swap::after {
+    animation: none !important;
+    opacity: 0;
+    content: none;
+  }
+}
+
+/* 不可作用于 sticky 的 header，否则会覆盖 position:sticky */
+.app-root > main {
+  position: relative;
+  z-index: 1;
+}
+
+/* —— 骨架屏（头像占位、列表/详情加载） —— */
+@keyframes ui-skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.ui-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-text-muted) 12%, var(--color-bg-surface));
+}
+
+.ui-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-text) 7%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: ui-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton::after {
+    animation: none;
+  }
+}

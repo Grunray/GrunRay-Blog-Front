@@ -1,0 +1,29 @@
+/**
+ * 抽象主题令牌 — 主色 #167095 / 次色 #FFDB00
+ * 仅 abstract 档使用的扩展变量可在此追加，并在组件中用 [data-theme='abstract'] 选择器引用。
+ */
+[data-theme='abstract'] {
+  --color-bg-base: #0a2330;
+  --color-bg-surface: #123848;
+  --color-bg-elevated: #061820;
+  --color-text: #f0f8fb;
+  --color-text-muted: #6a9fb3;
+  --color-border: #ffdb00;
+  --color-accent: #ffdb00;
+  --color-accent-muted: #d4bc00;
+  --color-on-accent: #0a2330;
+  --radius-sm: 4px;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --shadow-card: 4px 4px 0 #ffdb00;
+  --font-sans: 'JetBrains Mono', ui-monospace, monospace;
+  --cursor-trail-dot: rgb(255 219 0 / 55%);
+  /* 抽象档扩展：装饰层透明度 */
+  --abstract-grid-opacity: 0.12;
+  --glass-blur: 18px;
+  --glass-nav-blur: 22px;
+  --glass-card-bg: rgb(18 56 72 / 0.55);
+  --glass-card-border: rgb(255 219 0 / 0.28);
+  --glass-nav-bg: rgb(10 35 48 / 0.78);
+  --glass-nav-border: rgb(255 219 0 / 0.32);
+}

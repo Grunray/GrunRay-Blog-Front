@@ -1,0 +1,152 @@
+/* 栖息分区页；根节点 .xiqi-page.page-enter--play
+ * 三个页 (FragmentsView / AboutView / RecommendView) 共享。
+ * Hero 卡参考首页 left-ellipse 大幅滑入；
+ * Hero 内文字 chip / 主内容区块 / 列表卡参考首页·留言的 stagger 节奏。
+ */
+
+/* ---------- keyframes ---------- */
+
+@keyframes page-enter-xiqi-hero-slide {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * min(100%, 32vw))) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes page-enter-xiqi-chip {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes page-enter-xiqi-block {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 注意：故意不加 .xiqi-page:not(.page-enter--play) 强隐藏规则。
+ * 后台标签 rAF 被节流时 playPageEnter 可能不触发，强隐藏会让页面永久不显示。
+ * 用 animation-fill-mode: both 让动画 from 状态在 delay 期间生效即可，
+ * 代价是 page-enter--play 类加上前可能有 1-2 帧 FOUC，可接受。
+ */
+
+/* ---------- Hero 卡：从左侧大幅滑入 ---------- */
+
+.xiqi-page.page-enter--play .xiqi-hero {
+  animation: page-enter-xiqi-hero-slide 0.92s cubic-bezier(0.22, 1, 0.36, 1) 0.05s both;
+}
+
+/* ---------- Hero 内文字 cascade：eyebrow → title → sub ---------- */
+
+.xiqi-page.page-enter--play .xiqi-hero-chips > * {
+  animation: page-enter-xiqi-chip 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.xiqi-page.page-enter--play .xiqi-hero-chips > *:nth-child(1) {
+  animation-delay: 0.42s;
+}
+.xiqi-page.page-enter--play .xiqi-hero-chips > *:nth-child(2) {
+  animation-delay: 0.5s;
+}
+.xiqi-page.page-enter--play .xiqi-hero-chips > *:nth-child(3) {
+  animation-delay: 0.58s;
+}
+
+/* ---------- 主内容区块（Fragments / Recommend：split-main-inner; About：about-page-inner） ---------- */
+
+.xiqi-page.page-enter--play .xiqi-split-main-inner > *:not(.xiqi-hero),
+.xiqi-page.page-enter--play .about-page-inner > *:not(.xiqi-hero) {
+  animation: page-enter-xiqi-block 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 第 2/3/4... 子项依次入场（hero 是 nth-child(1)，所以正文从 (2) 起步）
+ * 留言页节奏：4 块 stagger ≈ 0.06s 间距，起步 ≈ 0.32s（在 hero 滑入到一半时入场）。
+ */
+.xiqi-page.page-enter--play .xiqi-split-main-inner > *:nth-child(2),
+.xiqi-page.page-enter--play .about-page-inner > *:nth-child(2) {
+  animation-delay: 0.32s;
+}
+.xiqi-page.page-enter--play .xiqi-split-main-inner > *:nth-child(3),
+.xiqi-page.page-enter--play .about-page-inner > *:nth-child(3) {
+  animation-delay: 0.38s;
+}
+.xiqi-page.page-enter--play .xiqi-split-main-inner > *:nth-child(4),
+.xiqi-page.page-enter--play .about-page-inner > *:nth-child(4) {
+  animation-delay: 0.44s;
+}
+.xiqi-page.page-enter--play .xiqi-split-main-inner > *:nth-child(5),
+.xiqi-page.page-enter--play .about-page-inner > *:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.xiqi-page.page-enter--play .xiqi-split-main-inner > *:nth-child(6),
+.xiqi-page.page-enter--play .about-page-inner > *:nth-child(6) {
+  animation-delay: 0.56s;
+}
+.xiqi-page.page-enter--play .xiqi-split-main-inner > *:nth-child(7),
+.xiqi-page.page-enter--play .about-page-inner > *:nth-child(7) {
+  animation-delay: 0.62s;
+}
+.xiqi-page.page-enter--play .xiqi-split-main-inner > *:nth-child(8),
+.xiqi-page.page-enter--play .about-page-inner > *:nth-child(8) {
+  animation-delay: 0.68s;
+}
+
+/* ---------- 列表卡：基于 --enter-i 的 stagger，间距对齐留言 0.07s ---------- */
+
+.xiqi-page.page-enter--play .xiqi-card {
+  animation: page-enter-xiqi-block 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.55s + (var(--enter-i, 0) * 0.07s));
+}
+
+/* ---------- 减弱动画偏好：全部禁用 + 立刻显示 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .xiqi-page.page-enter--play .xiqi-hero,
+  .xiqi-page.page-enter--play .xiqi-hero-chips > *,
+  .xiqi-page.page-enter--play .xiqi-split-main-inner > *,
+  .xiqi-page.page-enter--play .about-page-inner > *,
+  .xiqi-page.page-enter--play .xiqi-card {
+    animation: none;
+  }
+
+  .xiqi-page .xiqi-hero,
+  .xiqi-page .xiqi-hero-chips > *,
+  .xiqi-page .xiqi-split-main-inner > *,
+  .xiqi-page .about-page-inner > *,
+  .xiqi-page .xiqi-card {
+    opacity: 1;
+    transform: none;
+  }
+
+  .xiqi-detail-enter-active,
+  .xiqi-detail-leave-active {
+    transition: opacity 0.2s ease;
+  }
+
+  .xiqi-detail-enter-from,
+  .xiqi-detail-leave-to {
+    transform: none;
+  }
+
+  .xiqi-card--interactive:hover {
+    transform: none;
+  }
+
+  .xiqi-detail-close:hover {
+    transform: none;
+  }
+}
