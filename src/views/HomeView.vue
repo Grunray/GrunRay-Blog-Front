@@ -13,6 +13,7 @@ import { useUiStore } from '@/stores/ui'
 import type { Post } from '@/types/content'
 import { isStaticSite } from '@/config/staticSite'
 import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
+import { SITE_AVATAR_PHOTO_URL } from '@/config/siteAvatar'
 import { resolvePublicUrl } from '@/utils/resolvePublicUrl'
 import { readSessionJson, writeSessionJson } from '@/utils/sessionJsonCache'
 
@@ -31,21 +32,22 @@ const homeRoot = ref<HTMLElement | null>(null)
 const avatarUrl = ref('')
 const latestUpdatedPosts = ref<Post[]>([])
 const randomRecommendedPost = ref<Post | null>(null)
-const CACHE_HOME_AVATAR = 'grunray.home.avatarUrl.v1'
+const CACHE_HOME_AVATAR = 'grunray.home.avatarUrl.v2'
 const CACHE_HOME_LATEST = 'grunray.home.latestPosts.v1'
 const CACHE_HOME_RANDOM = 'grunray.home.randomPost.v1'
 
 async function loadAvatar() {
   const cached = readSessionJson<{ url: string }>(CACHE_HOME_AVATAR)
   if (cached?.url) {
-    avatarUrl.value = cached.url
+    avatarUrl.value = resolvePublicUrl(cached.url)
     return
   }
   try {
     if (isStaticSite) {
       const bundle = await loadStaticSiteBundle()
-      if (bundle.home.avatarUrl) {
-        avatarUrl.value = resolvePublicUrl(bundle.home.avatarUrl)
+      const fromBundle = bundle.home.avatarUrl
+      avatarUrl.value = fromBundle ? resolvePublicUrl(fromBundle) : SITE_AVATAR_PHOTO_URL
+      if (avatarUrl.value) {
         writeSessionJson(CACHE_HOME_AVATAR, { url: avatarUrl.value })
       }
       return

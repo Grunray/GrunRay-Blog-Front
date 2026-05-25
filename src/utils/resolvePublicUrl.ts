@@ -1,7 +1,16 @@
 const MEDIA_API_PREFIX = '/api/media/files/'
 const MEDIA_STATIC_PREFIX = '/content/media/'
 
-/** 将 /content/media/... 或 /api/media/files/... 转为带 Vite base 的路径 */
+function viteBaseRoot(): string {
+  const base = import.meta.env.BASE_URL || '/'
+  return base.endsWith('/') ? base.slice(0, -1) : base
+}
+
+function isAlreadyBaseScoped(path: string, root: string): boolean {
+  return Boolean(root && root !== '/' && (path === root || path.startsWith(`${root}/`)))
+}
+
+/** 将 /content/media/... 或 /api/media/files/... 转为带 Vite base 的路径（可重复调用） */
 export function resolvePublicUrl(href: string): string {
   if (!href) return href
   if (/^https?:\/\//i.test(href)) return href
@@ -9,9 +18,10 @@ export function resolvePublicUrl(href: string): string {
   if (path.includes(MEDIA_API_PREFIX)) {
     path = path.split(MEDIA_API_PREFIX).join(MEDIA_STATIC_PREFIX)
   }
-  const base = import.meta.env.BASE_URL || '/'
-  const root = base.endsWith('/') ? base.slice(0, -1) : base
+  const root = viteBaseRoot()
+  if (isAlreadyBaseScoped(path, root)) return path
   const normalized = path.startsWith('/') ? path : `/${path}`
+  if (!root || root === '/') return normalized
   return `${root}${normalized}`
 }
 
@@ -37,6 +47,8 @@ export function rewriteMediaInText(text: string): string {
     }
     return resolvePublicUrl(replaced)
   }
+  const root = viteBaseRoot()
+  if (isAlreadyBaseScoped(normalized, root)) return text
   if (normalized.startsWith(MEDIA_STATIC_PREFIX) || normalized.includes(MEDIA_STATIC_PREFIX)) {
     if (normalized.includes('<') || normalized.includes('![')) {
       return rewriteHtmlMediaUrls(normalized)

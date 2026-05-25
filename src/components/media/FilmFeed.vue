@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { isStaticSite } from '@/config/staticSite'
 import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
-import { resolvePublicUrl } from '@/utils/resolvePublicUrl'
 
 type MediaType = 'image' | 'gif' | 'video'
 type MediaItem = {
@@ -30,7 +29,6 @@ async function loadMedia() {
       const bundle = await loadStaticSiteBundle()
       items.value = (bundle.filmfeed ?? []).map((row) => ({
         ...row,
-        url: resolvePublicUrl(row.url),
         type: row.type as MediaType,
       }))
       return

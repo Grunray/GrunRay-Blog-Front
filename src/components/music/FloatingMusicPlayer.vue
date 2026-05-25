@@ -5,7 +5,6 @@ import { storeToRefs } from 'pinia'
 import { apiGet } from '@/api/http'
 import { isStaticSite } from '@/config/staticSite'
 import { loadStaticSiteBundle } from '@/services/static/staticSiteData'
-import { resolvePublicUrl } from '@/utils/resolvePublicUrl'
 import { useUiStore } from '@/stores/ui'
 
 /** 与 FilmFeed 全屏预览 (z-index:120) 错开 */
@@ -620,7 +619,6 @@ onMounted(async () => {
         (t) =>
           ({
             ...t,
-            url: resolvePublicUrl(t.url),
             title: t.title ?? null,
             artist: t.artist ?? null,
           }) as MusicTrack,

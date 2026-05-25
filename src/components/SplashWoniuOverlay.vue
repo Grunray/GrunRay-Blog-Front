@@ -29,9 +29,11 @@ const revealBeneath = ref(false)
 const irisVeilActive = ref(false)
 const irisVeilRef = ref<HTMLElement | null>(null)
 
+const pagesBase = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')
+
 const iframeSrc = computed(() => {
   const theme = ui.theme === 'dark' ? 'dark' : 'light'
-  return `/splash-woniu/index.html?theme=${theme}`
+  return `${pagesBase}splash-woniu/index.html?theme=${theme}`
 })
 
 function prefersReducedMotion(): boolean {
