@@ -11,6 +11,7 @@ import { SITE_NAME } from '@/config/site'
 import { canAccessPostPublic, ensureProjectsLoaded, getPostBySlug, getProjectById } from '@/services/contentRepository'
 import '@/styles/page-enter-post.css'
 import type { AlgorithmPost, Post, ProjectNote } from '@/types/content'
+import { rewriteHtmlMediaUrls } from '@/utils/resolvePublicUrl'
 
 const POST_DETAIL_CACHE_PREFIX = 'grunray-post-detail:'
 
@@ -155,7 +156,10 @@ useSeoMeta(() => {
 const algo = computed(() => (post.value?.type === 'algorithm' ? (post.value as AlgorithmPost) : null))
 const note = computed(() => (post.value?.type === 'project_note' ? (post.value as ProjectNote) : null))
 const noteProject = computed(() => (note.value ? getProjectById(note.value.project_id) : null))
-const renderedBodyHtml = computed(() => post.value?.body_html?.trim() || '')
+const renderedBodyHtml = computed(() => {
+  const raw = post.value?.body_html?.trim() || ''
+  return raw ? rewriteHtmlMediaUrls(raw) : ''
+})
 
 const codeCopyLabels = computed(() => ({
   copy: t('post.copyCode'),

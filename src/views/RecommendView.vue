@@ -20,6 +20,7 @@ import {
 } from '@/services/recommendApi'
 import '@/styles/page-enter-xiqi.css'
 import '@/styles/page-xiqi.css'
+import { rewriteHtmlMediaUrls } from '@/utils/resolvePublicUrl'
 
 type CategoryFilter = 'all' | RecommendCategory
 type SortOrder = 'newest' | 'oldest'
@@ -44,6 +45,10 @@ const items = ref<RecommendItem[]>([])
 const listLoading = ref(true)
 const listError = ref('')
 const detail = ref<RecommendDetail | null>(null)
+const detailBodyHtml = computed(() => {
+  const html = detail.value?.bodyHtml?.trim()
+  return html ? rewriteHtmlMediaUrls(html) : ''
+})
 const detailLoading = ref(false)
 
 const categoryOptions = computed<Array<{ id: CategoryFilter; label: string }>>(() => [
@@ -259,9 +264,9 @@ onMounted(async () => {
         <RecommendStarRating mode="display" :rating="displayedItem.rating" />
         <p v-if="detailLoading" class="recommend-detail-body">{{ t('fragments.loading') }}</p>
         <div
-          v-else-if="detail?.bodyHtml"
+          v-else-if="detailBodyHtml"
           class="recommend-detail-body prose body-markdown markdown-reading"
-          v-html="detail.bodyHtml"
+          v-html="detailBodyHtml"
         />
         <p v-else class="recommend-detail-body">{{ displayedItem.summary }}</p>
         <a

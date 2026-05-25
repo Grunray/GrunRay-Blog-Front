@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import type { ProjectLayoutBlock } from '@/types/content'
+import { resolvePublicUrl } from '@/utils/resolvePublicUrl'
 
 const props = defineProps<{ block: ProjectLayoutBlock }>()
 const { t } = useI18n()
@@ -15,6 +16,12 @@ const embedHtml = computed(() => {
 
 const hasEmbedHtml = computed(() => Boolean(embedHtml.value))
 const hasDemoUrl = computed(() => Boolean(props.block.demoUrl))
+
+const demoFrameSrc = computed(() => {
+  const url = props.block.demoUrl?.trim()
+  if (!url) return ''
+  return resolvePublicUrl(url)
+})
 </script>
 
 <template>
@@ -34,7 +41,7 @@ const hasDemoUrl = computed(() => Boolean(props.block.demoUrl))
       <iframe
         v-else-if="hasDemoUrl"
         class="demo-iframe"
-        :src="block.demoUrl"
+        :src="demoFrameSrc"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
         loading="lazy"
         :title="block.title || 'project demo'"

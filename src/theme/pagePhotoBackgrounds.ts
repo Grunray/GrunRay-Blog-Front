@@ -1,14 +1,20 @@
 import type { RouteLocationNormalized } from 'vue-router'
 
-/** 与 `backend/import/film/...` 经媒体 API 暴露的路径一致 */
-export const DEFAULT_PAGE_PHOTO_BG_URL = '/api/media/files/film/main/background/bg_homeview.png'
+import {
+  MEDIA_BG_404,
+  MEDIA_BG_HOME,
+  MEDIA_BG_SECONDARY,
+} from '@/config/mediaPaths'
+import { resolvePublicUrl } from '@/utils/resolvePublicUrl'
+
+export const DEFAULT_PAGE_PHOTO_BG_URL = MEDIA_BG_HOME
 
 /** 按路由 `name` 配置；未列出的路由在 resolve 时回落到 DEFAULT_PAGE_PHOTO_BG_URL */
 export const PAGE_PHOTO_BG_BY_ROUTE_NAME: Partial<Record<string, string>> = {
   home: DEFAULT_PAGE_PHOTO_BG_URL,
   projects: DEFAULT_PAGE_PHOTO_BG_URL,
-  'project-detail': '/api/media/files/film/main/background/bg_secondary.png',
-  'project-notes': '/api/media/files/film/main/background/bg_secondary.png',
+  'project-detail': MEDIA_BG_SECONDARY,
+  'project-notes': MEDIA_BG_SECONDARY,
   blog: DEFAULT_PAGE_PHOTO_BG_URL,
   messages: DEFAULT_PAGE_PHOTO_BG_URL,
   friends: DEFAULT_PAGE_PHOTO_BG_URL,
@@ -16,8 +22,8 @@ export const PAGE_PHOTO_BG_BY_ROUTE_NAME: Partial<Record<string, string>> = {
   fragments: DEFAULT_PAGE_PHOTO_BG_URL,
   about: DEFAULT_PAGE_PHOTO_BG_URL,
   recommend: DEFAULT_PAGE_PHOTO_BG_URL,
-  'post-detail': '/api/media/files/film/main/background/bg_secondary.png',
-  'not-found': '/api/media/files/film/404/404_not_found.jpg',
+  'post-detail': MEDIA_BG_SECONDARY,
+  'not-found': MEDIA_BG_404,
 }
 
 const CSS_VAR = '--page-photo-bg-image'
@@ -29,7 +35,8 @@ let lastResolvedPhotoBgUrl: string | null = null
 let photoBgSwapTimer: ReturnType<typeof setTimeout> | null = null
 
 function cssUrlValue(path: string): string {
-  const safe = path.replace(/\\/g, '/').replace(/'/g, "\\'")
+  const resolved = resolvePublicUrl(path)
+  const safe = resolved.replace(/'/g, "\\'")
   return `url('${safe}')`
 }
 

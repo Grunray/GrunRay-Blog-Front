@@ -4,6 +4,7 @@ import { Marked } from 'marked'
 import { computed } from 'vue'
 
 import type { ProjectLayoutBlock } from '@/types/content'
+import { rewriteHtmlMediaUrls } from '@/utils/resolvePublicUrl'
 
 const props = defineProps<{ block: ProjectLayoutBlock }>()
 
@@ -13,7 +14,7 @@ const bodyHtml = computed(() => {
   const raw = props.block.body?.trim()
   if (!raw) return ''
   const parsed = md.parse(raw, { async: false }) as string
-  return DOMPurify.sanitize(parsed)
+  return rewriteHtmlMediaUrls(DOMPurify.sanitize(parsed))
 })
 </script>
 

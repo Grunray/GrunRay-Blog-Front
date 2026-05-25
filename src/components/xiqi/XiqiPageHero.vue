@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 
 import { fetchXiqiPageConfig } from '@/services/fragmentsApi'
 import { resolveXiqiHeroImage } from '@/theme/xiqiHeroMedia'
+import { resolvePublicUrl } from '@/utils/resolvePublicUrl'
 
 const props = withDefaults(
   defineProps<{
@@ -34,7 +35,7 @@ const pageKey = computed(() => {
 
 const resolvedMedia = computed(() => {
   const override = props.mediaSrc?.trim()
-  if (override) return override
+  if (override) return resolvePublicUrl(override)
   if (apiHeroUrl.value) return apiHeroUrl.value
   return resolveXiqiHeroImage(pageKey.value)
 })
@@ -45,7 +46,8 @@ async function loadHeroFromApi() {
   if (props.mediaSrc?.trim()) return
   try {
     const cfg = await fetchXiqiPageConfig(pageKey.value)
-    apiHeroUrl.value = cfg.heroImageUrl?.trim() || null
+    const raw = cfg.heroImageUrl?.trim()
+    apiHeroUrl.value = raw ? resolvePublicUrl(raw) : null
   } catch {
     apiHeroUrl.value = null
   }

@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { ProjectLayoutBlock } from '@/types/content'
+import { resolvePublicUrl } from '@/utils/resolvePublicUrl'
 
 defineProps<{ block: ProjectLayoutBlock }>()
+
+function gallerySrc(src: string): string {
+  return resolvePublicUrl(src)
+}
 </script>
 
 <template>
@@ -9,7 +14,7 @@ defineProps<{ block: ProjectLayoutBlock }>()
     <h2 v-if="block.title" class="title">{{ block.title }}</h2>
     <div v-if="block.images?.length" class="grid">
       <figure v-for="(src, i) in block.images" :key="i" class="fig">
-        <img :src="src" :alt="`${block.title ?? 'gallery'} ${i + 1}`" loading="lazy" />
+        <img :src="gallerySrc(src)" :alt="`${block.title ?? 'gallery'} ${i + 1}`" loading="lazy" />
       </figure>
     </div>
   </section>

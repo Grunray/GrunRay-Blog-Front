@@ -14,8 +14,8 @@ html {
   font-family: var(--font-sans);
   color: var(--color-text);
   background: var(--color-bg-base);
-  /* 首屏默认；导航后由 router.afterEach + theme/pagePhotoBackgrounds.ts 写入内联 --page-photo-bg-image */
-  --page-photo-bg-image: url('/api/media/files/film/main/background/bg_homeview.png');
+  /* 首屏占位；实际由 pagePhotoBackgrounds.ts 写入带 base 的 --page-photo-bg-image */
+  --page-photo-bg-image: none;
   transition:
     background 0.35s ease,
     color 0.2s ease;

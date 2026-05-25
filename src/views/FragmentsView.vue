@@ -15,6 +15,7 @@ import { fetchFragmentDetail, fetchFragments, type Fragment, type FragmentDetail
 import { fetchMessageAuthUser } from '@/services/messageAuth'
 import '@/styles/page-enter-xiqi.css'
 import '@/styles/page-xiqi.css'
+import { rewriteHtmlMediaUrls } from '@/utils/resolvePublicUrl'
 
 type MoodFilter = 'all' | FragmentMood
 type SortOrder = 'newest' | 'oldest'
@@ -40,6 +41,10 @@ const fragments = ref<Fragment[]>([])
 const listLoading = ref(true)
 const listError = ref('')
 const detail = ref<FragmentDetail | null>(null)
+const detailBodyHtml = computed(() => {
+  const html = detail.value?.bodyHtml?.trim()
+  return html ? rewriteHtmlMediaUrls(html) : ''
+})
 const detailLoading = ref(false)
 const isSiteOwner = ref(false)
 
@@ -277,9 +282,9 @@ onMounted(async () => {
         </header>
         <p v-if="detailLoading" class="fragment-detail-body">{{ t('fragments.loading') }}</p>
         <div
-          v-else-if="detail?.bodyHtml"
+          v-else-if="detailBodyHtml"
           class="fragment-detail-body prose body-markdown markdown-reading"
-          v-html="detail.bodyHtml"
+          v-html="detailBodyHtml"
         />
         <p v-else class="fragment-detail-body">{{ displayedFragment.content }}</p>
       </article>
