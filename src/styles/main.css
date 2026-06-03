@@ -411,11 +411,27 @@ html[data-photo-bg='true'] .card.card-glass-dense {
 /* 全屏照片背景：照片铺满；灰色蒙层底缘随 --reveal-progress 与页脚顶缘对齐 */
 html[data-photo-bg='true'] {
   background-color: var(--color-bg-base);
+}
+
+/*
+ * 照片底图画在固定视口层（body::before），而不是直接画在 html 块盒上。
+ * html 的高度等于整篇文档内容高度，若在其上用 background-size:cover，图片会
+ * 随页面总高度被拉伸缩放（页面越长图越大），这正是「背景随界面高度改变缩放」的根因。
+ * 改用 position:fixed 的视口层后 cover 始终相对视口尺寸 —— 照片稳定铺满、不随内容
+ * 高度变化，同时保留桌面端「背景固定、内容滚过」的观感，并避开移动端
+ * background-attachment:fixed 的兼容/性能坑（iOS Safari 会忽略它）。
+ * z-index:-1 使其位于蒙层（html::before, z-index:0）与正文（#app, z-index:1）之下。
+ */
+html[data-photo-bg='true'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image: var(--page-photo-bg-image);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: scroll;
 }
 
 html[data-photo-bg='true']::before {
@@ -439,12 +455,6 @@ html[data-theme='light'][data-photo-bg='true']::before {
 
 html[data-theme='dark'][data-photo-bg='true']::before {
   background: linear-gradient(rgb(15 23 42 / 0.52), rgb(15 23 42 / 0.52));
-}
-
-@media (min-width: 960px) {
-  html[data-photo-bg='true'] {
-    background-attachment: fixed;
-  }
 }
 
 /* 照片背景 URL 切换：旧图叠在新图之上再淡出（由 pagePhotoBackgrounds.ts 打 class） */
